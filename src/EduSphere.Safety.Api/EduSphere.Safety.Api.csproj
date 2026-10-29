@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- SignalR + logging ship in Microsoft.AspNetCore.App; JwtBearer left the -->
+  <!-- shared framework in .NET 10, so it is a central-only package ref. -->
+  <!-- (Serilog stays a later plan; console provider is used here.) -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../EduSphere.Safety.Shared/EduSphere.Safety.Shared.csproj" />
+    <ProjectReference Include="../EduSphere.Safety.Core/EduSphere.Safety.Core.csproj" />
+    <ProjectReference Include="../EduSphere.Safety.Application/EduSphere.Safety.Application.csproj" />
+    <ProjectReference Include="../EduSphere.Safety.Infrastructure/EduSphere.Safety.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/EduSphere.Safety.Api/EduSphere.Safety.Api.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.Core/EduSphere.Safety.Core.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.Application/EduSphere.Safety.Application.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.Infrastructure/EduSphere.Safety.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.Shared/EduSphere.Safety.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

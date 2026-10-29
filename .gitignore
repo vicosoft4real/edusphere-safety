@@ -1,0 +1,33 @@
+# .NET build artifacts
+bin/
+obj/
+out/
+publish/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Test + coverage artifacts
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# IDE / editors
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tool scratch (never commit agent working state)
+.superpowers/
