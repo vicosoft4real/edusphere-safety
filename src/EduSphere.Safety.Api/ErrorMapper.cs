@@ -15,7 +15,9 @@ public static class ErrorMapper
         "validation.failed" => StatusCodes.Status400BadRequest,
         "device.not_found" => StatusCodes.Status404NotFound,
         "device.enrol_invalid" => StatusCodes.Status400BadRequest,
+        "device.campus_mismatch" => StatusCodes.Status403Forbidden,
         "camera.not_found" => StatusCodes.Status404NotFound,
+        "evidence.not_found" => StatusCodes.Status404NotFound,
         _ when code.StartsWith("incident.", StringComparison.Ordinal) => StatusCodes.Status422UnprocessableEntity,
         _ => StatusCodes.Status500InternalServerError,
     };

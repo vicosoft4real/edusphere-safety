@@ -36,11 +36,19 @@ public static class ApiApp
         builder.Services.Configure<PostgresOptions>(builder.Configuration.GetSection("Postgres"));
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<PostgresOptions>>().Value);
 
+        var storage = builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();
+        StorageOptions.Validate(storage);
+        builder.Services.AddSingleton(storage);
+
         builder.Services.AddSharedKernel();
         builder.Services.AddScoped<IIncidentStore, IncidentRepository>();
         builder.Services.AddScoped<IDeviceStore, DeviceStore>();
         builder.Services.AddScoped<ICameraStore, CameraStore>();
         builder.Services.AddScoped<IConfigStore, ConfigStore>();
+        if (string.Equals(storage.Backend, "S3", StringComparison.OrdinalIgnoreCase))
+            builder.Services.AddScoped<IEvidenceStore, S3EvidenceStore>();
+        else
+            builder.Services.AddScoped<IEvidenceStore, FileEvidenceStore>();
         builder.Services.AddSingleton<IIncidentBroadcaster, SignalRIncidentBroadcaster>();
         builder.Services.AddSignalR();
 
@@ -87,6 +95,7 @@ public static class ApiApp
         DeviceEndpoints.Map(app);
         CameraEndpoints.Map(app);
         ConfigEndpoints.Map(app);
+        EvidenceEndpoints.Map(app);
         return app;
     }
 

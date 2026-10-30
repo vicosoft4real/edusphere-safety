@@ -27,6 +27,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ReportCameraTestCommand, bool>, ReportCameraTestHandler>();
         services.AddTransient<ICommandHandler<PublishBundleCommand, int>, PublishBundleHandler>();
         services.AddTransient<ICommandHandler<SetPolicyCommand, bool>, SetPolicyHandler>();
+        services.AddTransient<ICommandHandler<RegisterManifestCommand, ManifestResult>, RegisterManifestHandler>();
+        services.AddTransient<ICommandHandler<CompleteManifestCommand, bool>, CompleteManifestHandler>();
+        services.AddTransient<ICommandHandler<ResolvePlaybackCommand, PlaybackResult>, ResolvePlaybackHandler>();
         return services;
     }
 }

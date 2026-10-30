@@ -31,6 +31,7 @@ public sealed class SafetyApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IIncidentBroadcaster>(Stores.Broadcast);
             services.AddSingleton<ICameraStore>(Stores.Cameras);
             services.AddSingleton<IConfigStore>(Stores.Config);
+            services.AddSingleton<IEvidenceStore>(Stores.Evidence);
         });
     }
 
@@ -47,6 +48,7 @@ public sealed class FakeApiStores
     public RecordingBroadcaster Broadcast { get; } = new();
     public FakeApiCameraStore Cameras { get; } = new();
     public FakeApiConfigStore Config { get; } = new();
+    public FakeApiEvidenceStore Evidence { get; } = new();
 
     public void Reset()
     {
@@ -55,6 +57,7 @@ public sealed class FakeApiStores
         Broadcast.Reset();
         Cameras.Reset();
         Config.Reset();
+        Evidence.Reset();
     }
 }
 
@@ -311,6 +314,54 @@ public sealed class FakeApiConfigStore : IConfigStore
     {
         _bundles.Clear();
         _policies.Clear();
+    }
+}
+
+public sealed class FakeApiEvidenceStore : IEvidenceStore
+{
+    public Dictionary<(string Tenant, string EdgeEvent, string Kind), EvidenceManifest> Manifests { get; } = new();
+    public List<AccessLogRow> AccessLog { get; } = new();
+
+    public Task RegisterManifestAsync(EvidenceManifest manifest, CancellationToken ct)
+    {
+        Manifests[(manifest.TenantId, manifest.EdgeEventId, manifest.Kind)] = manifest;
+        return Task.CompletedTask;
+    }
+
+    public Task<EvidenceManifest?> FindManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct) =>
+        Task.FromResult(Manifests.TryGetValue((tenantId, edgeEventId, kind), out var m) ? m : null);
+
+    public Task<bool> MarkUploadedAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct)
+    {
+        if (!Manifests.TryGetValue((tenantId, edgeEventId, kind), out var m))
+            return Task.FromResult(false);
+        Manifests[(tenantId, edgeEventId, kind)] = m with { UploadedAt = DateTimeOffset.UtcNow };
+        return Task.FromResult(true);
+    }
+
+    public Task LogAccessAsync(AccessLogRow row, CancellationToken ct)
+    {
+        AccessLog.Add(row);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<AccessLogRow>> ListAccessLogAsync(string tenantId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<AccessLogRow>>(AccessLog.Where(r => r.TenantId == tenantId).ToList());
+
+    public Task<string> MintPutUrlAsync(string tenantId, string objectKey, DateTimeOffset expiresAtUtc, CancellationToken ct) =>
+        Task.FromResult($"https://evidence.local/put/{objectKey}?sig=test");
+
+    public Task<string> MintGetUrlAsync(string tenantId, string objectKey, DateTimeOffset expiresAtUtc, CancellationToken ct) =>
+        Task.FromResult($"https://evidence.local/get/{objectKey}?sig=test");
+
+    public Task DeleteAsync(string objectKey, CancellationToken ct) => Task.CompletedTask;
+
+    public Task<bool> ExistsAsync(string objectKey, CancellationToken ct) => Task.FromResult(false);
+
+    public void Reset()
+    {
+        Manifests.Clear();
+        AccessLog.Clear();
     }
 }
 

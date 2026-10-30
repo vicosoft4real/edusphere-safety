@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using EduSphere.Safety.Api;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 public sealed class Plan3ApiTests : IClassFixture<SafetyApiFactory>
@@ -451,5 +452,144 @@ public sealed class Plan3ConfigApiTests : IClassFixture<SafetyApiFactory>
             recipients = new[] { "ops@school" },
         });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+}
+
+public sealed class Plan3EvidenceApiTests : IClassFixture<SafetyApiFactory>
+{
+    private static readonly string Sha = new('a', 64);
+
+    private readonly SafetyApiFactory _factory;
+
+    public Plan3EvidenceApiTests(SafetyApiFactory factory)
+    {
+        _factory = factory;
+        factory.Stores.Reset();
+        factory.Stores.Devices.Members.Add(("t1", "staff-1"));
+    }
+
+    private HttpClient UserClient(string tenantId = "t1", string userId = "staff-1")
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", SafetyApiFactory.UserToken(tenantId, userId));
+        return client;
+    }
+
+    private HttpClient NoRedirectClient(string tenantId = "t1", string userId = "staff-1")
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", SafetyApiFactory.UserToken(tenantId, userId));
+        return client;
+    }
+
+    private HttpClient DeviceClient(string deviceHeader)
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add(DeviceAuth.HeaderName, deviceHeader);
+        return client;
+    }
+
+    private async Task<(string DeviceId, string Secret)> EnrolDeviceAsync(HttpClient staff)
+    {
+        var codeResponse = await staff.PostAsJsonAsync("/v1/devices/enrol-codes", new { campusId = "campus-a" });
+        Assert.Equal(HttpStatusCode.OK, codeResponse.StatusCode);
+        var code = (await codeResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()!;
+
+        var enrolResponse = await _factory.CreateClient().PostAsJsonAsync("/v1/devices/enrol", new { code });
+        Assert.Equal(HttpStatusCode.OK, enrolResponse.StatusCode);
+        var enrolDoc = await enrolResponse.Content.ReadFromJsonAsync<JsonElement>();
+        return (enrolDoc.GetProperty("deviceId").GetString()!, enrolDoc.GetProperty("secret").GetString()!);
+    }
+
+    private static object ManifestBody(string edgeEventId = "evt-9", string kind = "clip", string campus = "campus-a") => new
+    {
+        campusId = campus,
+        cameraId = "cam-1",
+        edgeEventId,
+        kind,
+        bytes = 1024L,
+        sha256 = Sha,
+    };
+
+    [Fact]
+    public async Task Manifest_Complete_Playback302_LogsAudit()
+    {
+        var staff = UserClient();
+        var (deviceId, secret) = await EnrolDeviceAsync(staff);
+        var device = DeviceClient($"{deviceId}.{secret}");
+
+        var manifest = await device.PostAsJsonAsync("/v1/evidence/manifest", ManifestBody());
+        Assert.Equal(HttpStatusCode.OK, manifest.StatusCode);
+        var manifestDoc = await manifest.Content.ReadFromJsonAsync<JsonElement>();
+        var objectKey = manifestDoc.GetProperty("objectKey").GetString()!;
+        Assert.StartsWith("t1/campus-a/cam-1/", objectKey);
+        Assert.EndsWith(".clip.mp4", objectKey);
+        Assert.False(string.IsNullOrWhiteSpace(manifestDoc.GetProperty("putUrl").GetString()));
+
+        var complete = await device.PostAsJsonAsync(
+            "/v1/evidence/manifest/complete", new { edgeEventId = "evt-9", kind = "clip" });
+        Assert.Equal(HttpStatusCode.OK, complete.StatusCode);
+
+        var playback = await NoRedirectClient().GetAsync("/v1/evidence/evt-9/clip");
+        Assert.Equal(HttpStatusCode.Redirect, playback.StatusCode);
+        Assert.NotNull(playback.Headers.Location);
+        Assert.Contains(objectKey, playback.Headers.Location.ToString());
+
+        var audit = _factory.Stores.Evidence.AccessLog;
+        var row = Assert.Single(audit);
+        Assert.Equal("staff-1", row.ActorId);
+        Assert.Equal("t1", row.ManifestTenant);
+        Assert.Equal(objectKey, row.ObjectKey);
+    }
+
+    [Fact]
+    public async Task Manifest_BadKind_400()
+    {
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var response = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/evidence/manifest", ManifestBody(kind: "movie"));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Manifest_UnknownDevice_401()
+    {
+        var response = await DeviceClient("dev-nope.deadbeefdeadbeefdeadbeefdeadbeef")
+            .PostAsJsonAsync("/v1/evidence/manifest", ManifestBody());
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Manifest_DeviceCampusMismatch_403()
+    {
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var response = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/evidence/manifest", ManifestBody(campus: "campus-b"));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Playback_OtherTenant_404()
+    {
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var manifest = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/evidence/manifest", ManifestBody());
+        Assert.Equal(HttpStatusCode.OK, manifest.StatusCode);
+
+        _factory.Stores.Devices.Members.Add(("t2", "staff-9"));
+        var playback = await NoRedirectClient("t2", "staff-9").GetAsync("/v1/evidence/evt-9/clip");
+        Assert.Equal(HttpStatusCode.NotFound, playback.StatusCode);
+        Assert.Empty(_factory.Stores.Evidence.AccessLog);
+    }
+
+    [Fact]
+    public async Task Complete_UnknownManifest_404()
+    {
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var response = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/evidence/manifest/complete", new { edgeEventId = "evt-nope", kind = "clip" });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
