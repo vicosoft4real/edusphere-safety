@@ -23,6 +23,9 @@
     <ProjectReference Include="../../src/EduSphere.Safety.Application/EduSphere.Safety.Application.csproj" />
     <ProjectReference Include="../../src/EduSphere.Safety.Infrastructure/EduSphere.Safety.Infrastructure.csproj" />
     <ProjectReference Include="../../src/EduSphere.Safety.Shared/EduSphere.Safety.Shared.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.EdgeAgent/EduSphere.Safety.EdgeAgent.csproj" />
+    <ProjectReference Include="../../tools/Simulator/Simulator.csproj" />
   </ItemGroup>
 
 </Project>

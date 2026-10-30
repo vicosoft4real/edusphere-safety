@@ -6,6 +6,9 @@
     <Project Path="src/EduSphere.Safety.Application/EduSphere.Safety.Application.csproj" />
     <Project Path="src/EduSphere.Safety.Infrastructure/EduSphere.Safety.Infrastructure.csproj" />
     <Project Path="src/EduSphere.Safety.Worker/EduSphere.Safety.Worker.csproj" />
+    <Project Path="src/EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
+    <Project Path="src/EduSphere.Safety.EdgeAgent/EduSphere.Safety.EdgeAgent.csproj" />
+    <Project Path="tools/Simulator/Simulator.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/EduSphere.Safety.Tests/EduSphere.Safety.Tests.csproj" />

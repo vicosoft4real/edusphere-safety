@@ -11,6 +11,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="SkiaSharp" Version="2.88.8" />
+    <!-- CI-gated: consumed ONLY by src/EduSphere.Safety.Edge.Onnx (excluded from the
+         solution in-sandbox, so this pin alone changes no sandbox build). Confirm on
+         CI that 1.22.0 exists on the feed; update the pin if the version does not exist. -->
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.22.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />

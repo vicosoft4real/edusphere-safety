@@ -1,0 +1,31 @@
+<!-- CI-gated project: requires Microsoft.ML.OnnxRuntime, which is NOT in the
+     sandbox package cache and there is no network in the sandbox, so this project
+     CANNOT be restored or compiled there. It is deliberately NOT listed in
+     EduSphere.Safety.slnx. Connected CI re-includes it with:
+       dotnet sln EduSphere.Safety.slnx add src/EduSphere.Safety.Edge.Onnx/EduSphere.Safety.Edge.Onnx.csproj
+       dotnet restore --source <connected feed>
+       dotnet build src/EduSphere.Safety.Edge.Onnx -c Release
+     See README.md in this directory and docs/edge-benchmark.md for the full CI procedure.
+     Package versions resolve via Directory.Packages.props (central management):
+     Microsoft.ML.OnnxRuntime is pinned there (confirm the pin exists on CI;
+     update it if that exact version was withdrawn). SkiaSharp is NOT referenced here:
+     detection-path resampling is pure C# in EduSphere.Safety.Edge (ImageSampling);
+     SkiaSharp lives only in tools/Simulator. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
+  </ItemGroup>
+
+</Project>
