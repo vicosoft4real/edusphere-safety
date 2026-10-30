@@ -130,6 +130,9 @@ public sealed class Plan3ConfigTests
         public Task<BundleRecord?> GetLatestBundleAsync(string tenantId, CancellationToken ct) =>
             Task.FromResult(_bundles.TryGetValue(tenantId, out var list) && list.Count > 0 ? list[^1] : null);
 
+        public Task<PolicyRecord?> GetPolicyAsync(string tenantId, string id, CancellationToken ct) =>
+            Task.FromResult(_policies.TryGetValue(tenantId, out var list) ? list.FirstOrDefault(p => p.Id == id) : null);
+
         public Task SetPolicyAsync(PolicyRecord policy, CancellationToken ct)
         {
             if (!_policies.TryGetValue(policy.TenantId, out var list))

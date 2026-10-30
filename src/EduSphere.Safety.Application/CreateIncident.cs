@@ -32,7 +32,10 @@ public sealed class CreateIncidentCommandValidator : AbstractValidator<CreateInc
     }
 }
 
-public sealed class CreateIncidentHandler(IIncidentStore store) : ICommandHandler<CreateIncidentCommand, Guid>
+public sealed class CreateIncidentHandler(
+    IIncidentStore store,
+    INotificationStore notifications,
+    IConfigStore policies) : ICommandHandler<CreateIncidentCommand, Guid>
 {
     public async Task<Result<Guid>> HandleAsync(CreateIncidentCommand command, CancellationToken ct)
     {
@@ -43,7 +46,13 @@ public sealed class CreateIncidentHandler(IIncidentStore store) : ICommandHandle
 
         var existing = await store.FindByEdgeEventAsync(command.TenantId, command.EdgeEventId, ct);
         if (existing is not null)
+        {
+            // Duplicate delivery (edge retry after timeout, not a new event):
+            // the original creation may have crashed before scheduling, so
+            // re-ensure the level-1 row idempotently instead of skipping.
+            await ScheduleFirstEscalationAsync(command, existing.Id, ct);
             return Result<Guid>.Ok(existing.Id);
+        }
 
         var incident = Incident.Create(
             command.TenantId, command.CampusId, command.EventType, command.CameraId, command.EdgeEventId);
@@ -60,6 +69,22 @@ public sealed class CreateIncidentHandler(IIncidentStore store) : ICommandHandle
             modelVersion = command.ModelVersion,
         });
         var effectiveId = await store.AddAsync(incident, new OutboxEntry(command.TenantId, "incident.created", payload), ct);
+        // Lost-race path inside AddAsync returns the winner's id; the
+        // idempotent schedule insert converges both racers on one row with an
+        // identical due_at (derived from the same edge event).
+        await ScheduleFirstEscalationAsync(command, effectiveId, ct);
         return Result<Guid>.Ok(effectiveId);
+    }
+
+    private async Task ScheduleFirstEscalationAsync(CreateIncidentCommand command, Guid incidentId, CancellationToken ct)
+    {
+        var policy = await policies.GetPolicyAsync(command.TenantId, NotificationPolicy.DefaultId, ct);
+        if (policy is null)
+            return;
+        var levels = NotificationLevels.Parse(policy.LevelsJson);
+        if (levels.Count == 0)
+            return;
+        await notifications.ScheduleFirstAsync(
+            command.TenantId, incidentId, 1, command.DetectedAtUtc.AddSeconds(levels[0].AfterSeconds), ct);
     }
 }

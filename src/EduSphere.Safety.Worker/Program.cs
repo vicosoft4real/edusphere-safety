@@ -18,8 +18,12 @@ builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<NotificationO
 
 builder.Services.AddSharedKernel();
 builder.Services.AddScoped<IOutboxDispatcherStore, OutboxDispatcherStore>();
+builder.Services.AddScoped<IIncidentStore, IncidentRepository>();
+builder.Services.AddScoped<IConfigStore, ConfigStore>();
+builder.Services.AddScoped<INotificationStore, NotificationStore>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHostedService<OutboxDispatcher>();
+builder.Services.AddHostedService<EscalationDispatcher>();
 
 var host = builder.Build();
 

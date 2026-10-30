@@ -32,6 +32,7 @@ public sealed class SafetyApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<ICameraStore>(Stores.Cameras);
             services.AddSingleton<IConfigStore>(Stores.Config);
             services.AddSingleton<IEvidenceStore>(Stores.Evidence);
+            services.AddSingleton<INotificationStore>(Stores.Notifications);
         });
     }
 
@@ -49,6 +50,12 @@ public sealed class FakeApiStores
     public FakeApiCameraStore Cameras { get; } = new();
     public FakeApiConfigStore Config { get; } = new();
     public FakeApiEvidenceStore Evidence { get; } = new();
+    public FakeApiNotificationStore Notifications { get; }
+
+    public FakeApiStores()
+    {
+        Notifications = new FakeApiNotificationStore(Incidents);
+    }
 
     public void Reset()
     {
@@ -58,6 +65,7 @@ public sealed class FakeApiStores
         Cameras.Reset();
         Config.Reset();
         Evidence.Reset();
+        Notifications.Reset();
     }
 }
 
@@ -285,6 +293,9 @@ public sealed class FakeApiConfigStore : IConfigStore
     public Task<BundleRecord?> GetLatestBundleAsync(string tenantId, CancellationToken ct) =>
         Task.FromResult(_bundles.TryGetValue(tenantId, out var list) && list.Count > 0 ? list[^1] : null);
 
+    public Task<PolicyRecord?> GetPolicyAsync(string tenantId, string id, CancellationToken ct) =>
+        Task.FromResult(_policies.TryGetValue(tenantId, out var list) ? list.FirstOrDefault(p => p.Id == id) : null);
+
     public Task SetPolicyAsync(PolicyRecord policy, CancellationToken ct)
     {
         if (!_policies.TryGetValue(policy.TenantId, out var list))
@@ -362,6 +373,86 @@ public sealed class FakeApiEvidenceStore : IEvidenceStore
     {
         Manifests.Clear();
         AccessLog.Clear();
+    }
+}
+
+public sealed class FakeApiNotificationStore(FakeApiIncidentStore incidents) : INotificationStore
+{
+    public Dictionary<(string Tenant, Guid Incident, int Level), (DateTimeOffset Due, DateTimeOffset? LockedUntil, int Attempts)> Schedules { get; } = new();
+    public List<DeliveryAttempt> Attempts { get; } = new();
+
+    public Task ScheduleFirstAsync(string tenantId, Guid incidentId, int level, DateTimeOffset dueAtUtc, CancellationToken ct)
+    {
+        Schedules.TryAdd((tenantId, incidentId, level), (dueAtUtc, null, 0));
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<EscalationClaim>> ClaimDueAsync(int batchSize, DateTimeOffset leaseUntilUtc, CancellationToken ct)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var due = Schedules
+            .Where(kv => kv.Value.Due <= now && (kv.Value.LockedUntil is null || kv.Value.LockedUntil < now))
+            .OrderBy(kv => kv.Value.Due)
+            .Take(Math.Max(batchSize, 1))
+            .ToList();
+        var claims = new List<EscalationClaim>();
+        foreach (var kv in due)
+        {
+            Schedules[kv.Key] = (kv.Value.Due, leaseUntilUtc, kv.Value.Attempts + 1);
+            claims.Add(new EscalationClaim(kv.Key.Tenant, kv.Key.Incident, kv.Key.Level, kv.Value.Due, kv.Value.Attempts + 1));
+        }
+
+        return Task.FromResult<IReadOnlyList<EscalationClaim>>(claims);
+    }
+
+    public async Task<FireDecision> PrepareFireAsync(string tenantId, Guid incidentId, int level, CancellationToken ct)
+    {
+        var incident = await incidents.GetAsync(tenantId, incidentId, ct);
+        if (incident is null || incident.State != IncidentState.New)
+            Schedules.Remove((tenantId, incidentId, level));
+        return incident is not null && incident.State == IncidentState.New
+            ? FireDecision.Proceed
+            : FireDecision.Cancelled;
+    }
+
+    public Task SettleFireAsync(
+        string tenantId, Guid incidentId, int level,
+        IReadOnlyList<DeliveryAttempt> attempts, int? nextLevel, DateTimeOffset? nextDueAtUtc,
+        CancellationToken ct)
+    {
+        Attempts.AddRange(attempts);
+        Schedules.Remove((tenantId, incidentId, level));
+        if (nextLevel.HasValue && nextDueAtUtc.HasValue)
+            Schedules.TryAdd((tenantId, incidentId, nextLevel.Value), (nextDueAtUtc.Value, null, 0));
+        return Task.CompletedTask;
+    }
+
+    public Task DeferFireAsync(
+        string tenantId, Guid incidentId, int level, DateTimeOffset lockedUntilUtc,
+        IReadOnlyList<DeliveryAttempt> attempts, CancellationToken ct)
+    {
+        Attempts.AddRange(attempts);
+        if (Schedules.TryGetValue((tenantId, incidentId, level), out var s))
+            Schedules[(tenantId, incidentId, level)] = (s.Due, lockedUntilUtc, s.Attempts);
+        return Task.CompletedTask;
+    }
+
+    public Task CancelScheduleAsync(string tenantId, Guid incidentId, int level, CancellationToken ct)
+    {
+        Schedules.Remove((tenantId, incidentId, level));
+        return Task.CompletedTask;
+    }
+
+    public Task RecordAttemptsAsync(IReadOnlyList<DeliveryAttempt> attempts, CancellationToken ct)
+    {
+        Attempts.AddRange(attempts);
+        return Task.CompletedTask;
+    }
+
+    public void Reset()
+    {
+        Schedules.Clear();
+        Attempts.Clear();
     }
 }
 

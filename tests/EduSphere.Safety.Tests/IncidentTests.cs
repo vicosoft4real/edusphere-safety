@@ -235,7 +235,7 @@ public sealed class IncidentHandlerTests
     public async Task Duplicate_create_returns_same_id()
     {
         var store = new FakeIncidentStore();
-        var handler = new CreateIncidentHandler(store);
+        var handler = new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore());
         var first = await handler.HandleAsync(ValidCreate(), CancellationToken.None);
         var second = await handler.HandleAsync(ValidCreate(), CancellationToken.None);
         Assert.True(first.IsSuccess);
@@ -265,7 +265,7 @@ public sealed class IncidentHandlerTests
     public async Task Store_conflict_path_returns_existing_id_without_second_outbox_row()
     {
         var store = new FakeIncidentStore();
-        var handler = new CreateIncidentHandler(store);
+        var handler = new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore());
         var created = await handler.HandleAsync(ValidCreate("edge-conflict-1"), CancellationToken.None);
         Assert.True(created.IsSuccess);
 
@@ -282,7 +282,7 @@ public sealed class IncidentHandlerTests
     public async Task Duplicate_create_is_scoped_by_tenant()
     {
         var store = new FakeIncidentStore();
-        var handler = new CreateIncidentHandler(store);
+        var handler = new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore());
         var first = await handler.HandleAsync(ValidCreate(), CancellationToken.None);
         var otherTenant = await handler.HandleAsync(ValidCreate() with { TenantId = "t2" }, CancellationToken.None);
         Assert.True(first.IsSuccess);
@@ -293,7 +293,7 @@ public sealed class IncidentHandlerTests
     [Fact]
     public async Task Create_rejects_missing_fields()
     {
-        var handler = new CreateIncidentHandler(new FakeIncidentStore());
+        var handler = new CreateIncidentHandler(new IncidentHandlerTests.FakeIncidentStore(), new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore());
         var result = await handler.HandleAsync(ValidCreate() with { TenantId = "" }, CancellationToken.None);
         Assert.False(result.IsSuccess);
         Assert.Equal("validation.failed", result.Error?.Code);
@@ -302,7 +302,7 @@ public sealed class IncidentHandlerTests
     [Fact]
     public async Task Create_rejects_detectedAt_more_than_5min_in_future()
     {
-        var handler = new CreateIncidentHandler(new FakeIncidentStore());
+        var handler = new CreateIncidentHandler(new IncidentHandlerTests.FakeIncidentStore(), new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore());
         var result = await handler.HandleAsync(
             ValidCreate() with { DetectedAtUtc = DateTimeOffset.UtcNow.AddMinutes(30) },
             CancellationToken.None);
@@ -314,7 +314,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_acknowledges_with_current_version()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         Assert.True(created.IsSuccess);
         var incidentId = created.Value;
         Assert.NotEqual(Guid.Empty, incidentId);
@@ -334,7 +334,7 @@ public sealed class IncidentHandlerTests
     public async Task Stale_version_returns_concurrency_conflict()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var handler = new TransitionIncidentHandler(store);
         var first = await handler.HandleAsync(
@@ -360,7 +360,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_cross_tenant_returns_not_found()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var result = await new TransitionIncidentHandler(store).HandleAsync(
             TransitionTo(incidentId, "t2", 0, IncidentState.Acknowledged), CancellationToken.None);
@@ -382,7 +382,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_acknowledged_to_resolved_returns_invalid_transition_not_conflict()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var handler = new TransitionIncidentHandler(store);
         var acked = await handler.HandleAsync(
@@ -399,7 +399,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_lost_race_on_save_returns_concurrency_conflict()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         store.FailNextSave = true;
         var result = await new TransitionIncidentHandler(store).HandleAsync(
@@ -412,7 +412,7 @@ public sealed class IncidentHandlerTests
     public async Task Failed_save_leaves_stored_state_and_outbox_unchanged()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         Assert.Single(store.Outbox);
 
@@ -433,7 +433,7 @@ public sealed class IncidentHandlerTests
     public async Task Concurrent_views_are_independent_objects()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var handler = new TransitionIncidentHandler(store);
         Assert.True((await handler.HandleAsync(
@@ -458,7 +458,7 @@ public sealed class IncidentHandlerTests
     public async Task Stale_version_with_illegal_move_returns_concurrency_conflict()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var handler = new TransitionIncidentHandler(store);
         Assert.True((await handler.HandleAsync(
@@ -476,7 +476,7 @@ public sealed class IncidentHandlerTests
     public async Task Updated_outbox_payload_carries_post_increment_version()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         Assert.True((await new TransitionIncidentHandler(store).HandleAsync(
             TransitionTo(incidentId, "t1", 0, IncidentState.Acknowledged), CancellationToken.None)).IsSuccess);
@@ -492,7 +492,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_cross_tenant_lookup_null_returns_not_found()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var crossTenantLoad = await store.GetAsync("t2", incidentId, CancellationToken.None);
         Assert.Null(crossTenantLoad);
@@ -506,7 +506,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_invalid_move_returns_invalid_transition_code()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var handler = new TransitionIncidentHandler(store);
         var acked = await handler.HandleAsync(
@@ -522,7 +522,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_dismiss_with_whitespace_reason_fails()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var handler = new TransitionIncidentHandler(store);
         Assert.True((await handler.HandleAsync(
@@ -539,7 +539,7 @@ public sealed class IncidentHandlerTests
     public async Task Transition_rejects_empty_actor()
     {
         var store = new FakeIncidentStore();
-        var created = await new CreateIncidentHandler(store).HandleAsync(ValidCreate(), CancellationToken.None);
+        var created = await new CreateIncidentHandler(store, new Plan3NotificationTests.FakeNotificationStore(), Plan3NotificationTests.EmptyPolicyStore()).HandleAsync(ValidCreate(), CancellationToken.None);
         var incidentId = created.Value;
         var command = TransitionTo(incidentId, "t1", 0, IncidentState.Acknowledged) with { ActorId = "" };
         var result = await new TransitionIncidentHandler(store).HandleAsync(command, CancellationToken.None);

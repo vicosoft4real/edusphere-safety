@@ -25,6 +25,7 @@
     <ProjectReference Include="../../src/EduSphere.Safety.Shared/EduSphere.Safety.Shared.csproj" />
     <ProjectReference Include="../../src/EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
     <ProjectReference Include="../../src/EduSphere.Safety.EdgeAgent/EduSphere.Safety.EdgeAgent.csproj" />
+    <ProjectReference Include="../../src/EduSphere.Safety.Worker/EduSphere.Safety.Worker.csproj" />
     <ProjectReference Include="../../tools/Simulator/Simulator.csproj" />
   </ItemGroup>
 

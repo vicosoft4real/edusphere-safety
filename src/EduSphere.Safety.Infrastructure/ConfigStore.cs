@@ -45,6 +45,20 @@ public sealed class ConfigStore(PostgresOptions options) : IConfigStore
         return version;
     }
 
+    public async Task<PolicyRecord?> GetPolicyAsync(string tenantId, string id, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(RequireConnectionString());
+        await connection.OpenAsync(ct);
+        var row = await connection.QuerySingleOrDefaultAsync<PolicyRow>(
+            new CommandDefinition(
+                "SELECT tenant_id AS \"TenantId\", id AS \"Id\", levels::text AS \"LevelsJson\", recipients::text AS \"RecipientsJson\", created_by AS \"CreatedBy\", created_at AS \"CreatedAt\" FROM notification_policies WHERE tenant_id = @tenant AND id = @id",
+                new { tenant = tenantId, id },
+                cancellationToken: ct));
+        return row is null
+            ? null
+            : new PolicyRecord(row.TenantId, row.Id, row.LevelsJson, row.RecipientsJson, row.CreatedBy, row.CreatedAt);
+    }
+
     public async Task<BundleRecord?> GetLatestBundleAsync(string tenantId, CancellationToken ct)
     {
         await using var connection = new NpgsqlConnection(RequireConnectionString());

@@ -21,6 +21,8 @@ public interface IConfigStore
 
     Task<BundleRecord?> GetLatestBundleAsync(string tenantId, CancellationToken ct);
 
+    Task<PolicyRecord?> GetPolicyAsync(string tenantId, string id, CancellationToken ct);
+
     Task SetPolicyAsync(PolicyRecord policy, CancellationToken ct);
 
     Task<IReadOnlyList<PolicyRecord>> ListPoliciesAsync(string tenantId, CancellationToken ct);

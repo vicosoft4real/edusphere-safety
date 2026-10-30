@@ -1,3 +1,4 @@
+using System.Text.Json;
 using EduSphere.Safety.Application;
 
 namespace EduSphere.Safety.Worker;
@@ -56,18 +57,22 @@ public sealed class OutboxDispatcher(
     {
         using var scope = _scopes.CreateScope();
         var store = scope.ServiceProvider.GetRequiredService<IOutboxDispatcherStore>();
+        var ledger = scope.ServiceProvider.GetRequiredService<INotificationStore>();
         var leaseUntil = DateTimeOffset.UtcNow.AddSeconds(Math.Max(1, _outbox.LeaseSeconds));
         var due = await store.ClaimDueAsync(Math.Max(1, _outbox.BatchSize), leaseUntil, ct);
         foreach (var row in due)
         {
             if (ct.IsCancellationRequested)
                 break;
-            await DeliverAsync(store, row, ct);
+            await DeliverAsync(store, ledger, row, ct);
         }
     }
 
-    private async Task DeliverAsync(IOutboxDispatcherStore store, OutboxClaim row, CancellationToken ct)
+    private async Task DeliverAsync(
+        IOutboxDispatcherStore store, INotificationStore ledger, OutboxClaim row, CancellationToken ct)
     {
+        var ledgerRef = IncidentRef(row);
+        var sent = new List<DeliveryAttempt>();
         try
         {
             var attempted = 0;
@@ -77,10 +82,17 @@ public sealed class OutboxDispatcher(
                     break;
                 await _email.SendAsync(to, $"[safety] {row.Type}", row.Payload, ct);
                 attempted++;
+                if (ledgerRef is not null)
+                    sent.Add(new DeliveryAttempt(ledgerRef.Value.Tenant, ledgerRef.Value.Incident, "email", 0, to, "accepted", string.Empty));
             }
 
             if (ct.IsCancellationRequested)
+            {
+                if (ledgerRef is not null)
+                    await RecordBestEffortAsync(ledger, sent.Concat(Rest(ledgerRef.Value, sent, "unknown", "Cancelled during send.")));
                 return;
+            }
+
             if (attempted == 0)
             {
                 // Belt-and-braces: validation should have prevented startup with
@@ -90,17 +102,69 @@ public sealed class OutboxDispatcher(
                 return;
             }
 
+            if (ledgerRef is not null)
+                await RecordBestEffortAsync(ledger, sent);
             await store.DeleteAsync(row.Id, ct);
             _logger.LogInformation("Outbox {OutboxId} ({Type}) delivered.", row.Id, row.Type);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Outbox {OutboxId} delivery failed (attempt {Attempts}).", row.Id, row.Attempts);
+            if (ledgerRef is not null)
+                await RecordBestEffortAsync(ledger, sent.Concat(Rest(ledgerRef.Value, sent, "failed", ex.Message)));
             // attempts was already incremented by the atomic claim.
             var lockedUntil = row.Attempts >= DeadLetterAttempts
                 ? DateTimeOffset.UtcNow.AddHours(24)
                 : DateTimeOffset.UtcNow.Add(Backoff(row.Attempts));
             await store.RescheduleAsync(row.Id, lockedUntil, ct);
+        }
+    }
+
+    private List<DeliveryAttempt> Rest(
+        (string Tenant, Guid Incident) ledgerRef, List<DeliveryAttempt> sent, string state, string detail) =>
+        _notifications.To
+            .Where(to => sent.All(s => s.Recipient != to))
+            .Select(to => new DeliveryAttempt(ledgerRef.Tenant, ledgerRef.Incident, "email", 0, to, state, detail))
+            .ToList();
+
+    private static (string Tenant, Guid Incident)? IncidentRef(OutboxClaim row)
+    {
+        // Level-0 ledger covers incident.created only; every other outbox type
+        // keeps today's behavior with no ledger rows. Unparsable payloads
+        // degrade to no-ledger rather than failing delivery.
+        if (!string.Equals(row.Type, "incident.created", StringComparison.Ordinal))
+            return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(row.Payload);
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("tenantId", out var tenant)
+                || !root.TryGetProperty("incidentId", out var id)
+                || tenant.ValueKind != JsonValueKind.String
+                || id.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(tenant.GetString())
+                || !Guid.TryParse(id.GetString(), out var incident))
+                return null;
+            return (tenant.GetString()!, incident);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task RecordBestEffortAsync(INotificationStore ledger, IEnumerable<DeliveryAttempt> attempts)
+    {
+        // The ledger must never block or fail delivery: alerts flow even when
+        // audit is down. Detached token so a racing shutdown cannot cancel the
+        // write after a successful send.
+        try
+        {
+            await ledger.RecordAttemptsAsync(attempts.ToList(), CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Level-0 delivery ledger append failed; delivery outcome stands.");
         }
     }
 

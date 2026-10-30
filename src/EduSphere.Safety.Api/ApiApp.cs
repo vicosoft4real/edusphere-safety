@@ -45,6 +45,7 @@ public static class ApiApp
         builder.Services.AddScoped<IDeviceStore, DeviceStore>();
         builder.Services.AddScoped<ICameraStore, CameraStore>();
         builder.Services.AddScoped<IConfigStore, ConfigStore>();
+        builder.Services.AddScoped<INotificationStore, NotificationStore>();
         if (string.Equals(storage.Backend, "S3", StringComparison.OrdinalIgnoreCase))
             builder.Services.AddScoped<IEvidenceStore, S3EvidenceStore>();
         else
