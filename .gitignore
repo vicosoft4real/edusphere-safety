@@ -31,3 +31,8 @@ Thumbs.db
 
 # Tool scratch (never commit agent working state)
 .superpowers/
+
+# Next.js web app
+web/node_modules/
+web/.next/
+web/out/

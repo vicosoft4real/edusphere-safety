@@ -223,6 +223,7 @@ public static class IncidentsEndpoints
         campusId = incident.CampusId,
         eventType = incident.EventType,
         cameraId = incident.CameraId,
+        edgeEventId = incident.EdgeEventId,
         state = incident.State.ToString(),
         version = incident.Version,
     };
