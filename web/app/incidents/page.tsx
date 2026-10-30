@@ -15,6 +15,7 @@ export default async function InboxPage({
   const active = STATES.includes(state as (typeof STATES)[number]) ? state! : "New";
   const res = await safetyFetch<{ items: Incident[] }>("/v1/incidents?limit=200&offset=0");
   if (res.status === 401) redirect("/login");
+  if (res.status === 403) redirect("/denied");
 
   if (!res.data) {
     return (

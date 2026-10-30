@@ -8,6 +8,7 @@ export default async function DevicesPage() {
   if (!(await signedIn())) redirect("/login");
   const res = await safetyFetch<{ items: DeviceItem[] }>("/v1/devices");
   if (res.status === 401) redirect("/login");
+  if (res.status === 403) redirect("/denied");
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">

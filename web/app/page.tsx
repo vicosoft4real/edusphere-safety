@@ -19,6 +19,7 @@ export default async function OverviewPage() {
     safetyFetch<{ items: Incident[] }>("/v1/incidents?limit=50&offset=0"),
   ]);
   if (devicesRes.status === 401 || incidentsRes.status === 401) redirect("/login");
+  if (devicesRes.status === 403 || incidentsRes.status === 403) redirect("/denied");
 
   const devices = devicesRes.data?.items ?? [];
   const incidents = incidentsRes.data?.items ?? [];
@@ -44,6 +45,9 @@ export default async function OverviewPage() {
           </Link>
           <Link href="/policies" className="underline">
             Notifications
+          </Link>
+          <Link href="/diagnostics" className="underline">
+            Diagnostics
           </Link>
           <Link href="/login" className="text-stone-500">
             Switch user

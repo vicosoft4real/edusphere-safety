@@ -9,6 +9,7 @@ export default async function RulesPage() {
     "/v1/config/bundles/latest"
   );
   if (res.status === 401) redirect("/login");
+  if (res.status === 403) redirect("/denied");
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">

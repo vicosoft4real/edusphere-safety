@@ -79,6 +79,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     window.location.href = "/login";
     throw new Error("Signed out");
   }
+  if (res.status === 403) {
+    window.location.href = "/denied";
+    throw new Error("Not permitted");
+  }
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiError | null;
     throw new Error(body?.message ?? `Request failed (${res.status})`);
@@ -102,6 +106,10 @@ export const api = {
       if (res.status === 401) {
         window.location.href = "/login";
         throw new Error("Signed out");
+      }
+      if (res.status === 403) {
+        window.location.href = "/denied";
+        throw new Error("Not permitted");
       }
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as ApiError | null;

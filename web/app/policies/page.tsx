@@ -8,6 +8,7 @@ export default async function PoliciesPage() {
   if (!(await signedIn())) redirect("/login");
   const res = await safetyFetch<{ items: Policy[] }>("/v1/config/policies");
   if (res.status === 401) redirect("/login");
+  if (res.status === 403) redirect("/denied");
 
   const current = res.data?.items.find((p) => p.id === "default") ?? null;
 

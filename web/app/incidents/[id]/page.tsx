@@ -17,6 +17,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const res = await safetyFetch<Incident>(`/v1/incidents/${id}`);
   if (res.status === 401) redirect("/login");
+  if (res.status === 403) redirect("/denied");
   if (res.status === 404 || !res.data) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-8">
