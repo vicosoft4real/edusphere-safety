@@ -30,6 +30,7 @@ public sealed class SafetyApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IDeviceStore>(Stores.Devices);
             services.AddSingleton<IIncidentBroadcaster>(Stores.Broadcast);
             services.AddSingleton<ICameraStore>(Stores.Cameras);
+            services.AddSingleton<IConfigStore>(Stores.Config);
         });
     }
 
@@ -45,6 +46,7 @@ public sealed class FakeApiStores
     public FakeApiDeviceStore Devices { get; } = new();
     public RecordingBroadcaster Broadcast { get; } = new();
     public FakeApiCameraStore Cameras { get; } = new();
+    public FakeApiConfigStore Config { get; } = new();
 
     public void Reset()
     {
@@ -52,6 +54,7 @@ public sealed class FakeApiStores
         Devices.Reset();
         Broadcast.Reset();
         Cameras.Reset();
+        Config.Reset();
     }
 }
 
@@ -257,6 +260,58 @@ public sealed class RecordingBroadcaster : IIncidentBroadcaster
     }
 
     public void Reset() => Calls.Clear();
+}
+
+public sealed class FakeApiConfigStore : IConfigStore
+{
+    private readonly Dictionary<string, List<BundleRecord>> _bundles = new();
+    private readonly Dictionary<string, List<PolicyRecord>> _policies = new();
+
+    public Task<int> PublishBundleAsync(string tenantId, string document, string createdBy, CancellationToken ct)
+    {
+        if (!_bundles.TryGetValue(tenantId, out var list))
+        {
+            list = [];
+            _bundles[tenantId] = list;
+        }
+
+        list.Add(new BundleRecord(tenantId, list.Count + 1, document, createdBy, DateTimeOffset.UtcNow));
+        return Task.FromResult(list.Count);
+    }
+
+    public Task<BundleRecord?> GetLatestBundleAsync(string tenantId, CancellationToken ct) =>
+        Task.FromResult(_bundles.TryGetValue(tenantId, out var list) && list.Count > 0 ? list[^1] : null);
+
+    public Task SetPolicyAsync(PolicyRecord policy, CancellationToken ct)
+    {
+        if (!_policies.TryGetValue(policy.TenantId, out var list))
+        {
+            list = [];
+            _policies[policy.TenantId] = list;
+        }
+
+        list.RemoveAll(p => p.Id == policy.Id);
+        list.Add(policy);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<PolicyRecord>> ListPoliciesAsync(string tenantId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<PolicyRecord>>(
+            _policies.TryGetValue(tenantId, out var list) ? list.ToList() : []);
+
+    public async Task<ActiveConfig?> GetActiveConfigAsync(string tenantId, CancellationToken ct)
+    {
+        var bundle = await GetLatestBundleAsync(tenantId, ct);
+        if (bundle is null)
+            return null;
+        return new ActiveConfig(tenantId, bundle.Version, bundle.Document, await ListPoliciesAsync(tenantId, ct));
+    }
+
+    public void Reset()
+    {
+        _bundles.Clear();
+        _policies.Clear();
+    }
 }
 
 public sealed class IncidentApiTests : IClassFixture<SafetyApiFactory>

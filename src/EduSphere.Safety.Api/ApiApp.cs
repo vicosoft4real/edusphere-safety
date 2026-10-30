@@ -40,6 +40,7 @@ public static class ApiApp
         builder.Services.AddScoped<IIncidentStore, IncidentRepository>();
         builder.Services.AddScoped<IDeviceStore, DeviceStore>();
         builder.Services.AddScoped<ICameraStore, CameraStore>();
+        builder.Services.AddScoped<IConfigStore, ConfigStore>();
         builder.Services.AddSingleton<IIncidentBroadcaster, SignalRIncidentBroadcaster>();
         builder.Services.AddSignalR();
 
@@ -85,6 +86,7 @@ public static class ApiApp
         IncidentsEndpoints.Map(app);
         DeviceEndpoints.Map(app);
         CameraEndpoints.Map(app);
+        ConfigEndpoints.Map(app);
         return app;
     }
 

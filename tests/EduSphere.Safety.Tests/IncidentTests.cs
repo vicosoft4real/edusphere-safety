@@ -550,9 +550,9 @@ public sealed class IncidentHandlerTests
 
 public sealed class SenderTests
 {
-    private sealed record PingCommand(string Text) : ICommand<string>;
+    public sealed record PingCommand(string Text) : ICommand<string>;
 
-    private sealed class PingHandler : ICommandHandler<PingCommand, string>
+    public sealed class PingHandler : ICommandHandler<PingCommand, string>
     {
         public Task<Result<string>> HandleAsync(PingCommand command, CancellationToken ct)
             => Task.FromResult(Result<string>.Ok("pong:" + command.Text));

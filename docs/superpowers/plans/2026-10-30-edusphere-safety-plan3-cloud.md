@@ -99,10 +99,10 @@ CREATE TABLE IF NOT EXISTS tenant_config_state (tenant_id TEXT PRIMARY KEY REFER
 
 Rules: publish validates the bundle by loading it through the edge `RuleBundleLoader` semantics (valid shape; unknown members ignored per Task 5 test) and bumps `tenant_config_state.bundle_version` in the SAME transaction (insert bundle + upsert counter). Edge pull `GET /v1/devices/config` (device auth) serves the active bundle + policy snapshot with `ETag: W/"{bundleVersion}"`; `If-None-Match` match → 304. Heartbeat response (Task 6) compares device `config_version` to this counter for the stale flag.
 
-- [ ] **Step 1: Write failing tests** — malformed bundle rejected; publish bumps version exactly once; pull with matching ETag is 304; pull content equals published snapshot.
-- [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Verify** — compile 0/0; migration applies; probe: publish → pull full → pull 304 → publish → pull new ETag.
+- [x] **Step 1: Write failing tests** — malformed bundle rejected; publish bumps version exactly once; pull with matching ETag is 304; pull content equals published snapshot. (`Plan3ConfigTests`: dangling/duplicate/malformed RED first; `Plan3ConfigApiTests`: HTTP-level ETag/304 cycle for CI.)
+- [x] **Step 2: Run to verify they fail.** — RED observed: dangling-schedule test failed (test bug fixed: replacement hit both declaration and reference); new API tests fail in-sandbox only on the WebApplicationFactory `deps.json` gate (same as all ApiTests; logic proven via direct-drive probe).
+- [x] **Step 3: Implement.** — `ConfigDistribution` (cloud shape validation; semantics edge-side), `ConfigStore` (seed + `FOR UPDATE` + insert + counter in one tx), staff `ConfigEndpoints`, edge pull `GET /v1/devices/config` with `ETag: W/"{version}"` + 304, migration `004_config.sql`.
+- [x] **Step 4: Verify** — src builds 0 warnings 0 errors; tests Roslyn-compile clean; direct-drive probe 41/41 PASS incl. publish → pull full (`W/"1"`) → pull 304 → publish → pull new ETag (`W/"2"`), malformed/dangling/duplicate 400s, 403/401/404s, policy round-trip; migration chain verified statically (001 owns `tenants` + `schema_migrations`; 004 single-line statements); live `postgres --single` apply is CI-gated (PG binaries refuse this sandbox: unknown uid 501). Full suite 425 passed; 44 failed = all env-gated (WebApplicationFactory/Testcontainers), 0 product failures. Edge control 364/364.
 - [ ] **Step 5: Commit.**
 
 ### Task 4: Evidence — S3 seam, manifests, presigned URLs (TDD)

@@ -21,6 +21,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICommandHandler<EnrolDeviceCommand, EnrolResult>, EnrolDeviceHandler>();
         services.AddTransient<ICommandHandler<RotateDeviceSecretCommand, string>, RotateDeviceSecretHandler>();
         services.AddTransient<ICommandHandler<RevokeDeviceCommand, bool>, RevokeDeviceHandler>();
+        services.AddTransient<ICommandHandler<CreateCameraCommand, string>, CreateCameraHandler>();
+        services.AddTransient<ICommandHandler<ReplaceCameraCommand, bool>, ReplaceCameraHandler>();
+        services.AddTransient<ICommandHandler<DeleteCameraCommand, bool>, DeleteCameraHandler>();
+        services.AddTransient<ICommandHandler<ReportCameraTestCommand, bool>, ReportCameraTestHandler>();
+        services.AddTransient<ICommandHandler<PublishBundleCommand, int>, PublishBundleHandler>();
+        services.AddTransient<ICommandHandler<SetPolicyCommand, bool>, SetPolicyHandler>();
         return services;
     }
 }

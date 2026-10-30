@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using EduSphere.Safety.Application;
 using EduSphere.Safety.Shared;
 
@@ -23,6 +24,7 @@ public static class DeviceEndpoints
         // code IS the credential. Rate limiting is CI-hardening (noted, not claimed).
         app.MapPost("/v1/devices/enrol", PostEnrolAsync);
         app.MapPost("/v1/devices/rotate", PostRotateAsync);
+        app.MapGet("/v1/devices/config", GetConfigAsync);
     }
 
     public static async Task<IResult> PostEnrolCodeAsync(
@@ -94,6 +96,37 @@ public static class DeviceEndpoints
         if (!result.IsSuccess)
             return ErrorMapper.ToResult(result.Error!);
         return Results.Json(new { id, revoked = result.Value });
+    }
+
+    public static async Task<IResult> GetConfigAsync(
+        HttpContext http,
+        IDeviceStore devices,
+        IConfigStore config,
+        CancellationToken ct)
+    {
+        if (!DeviceAuth.TryParseHeader(http.Request.Headers[DeviceAuth.HeaderName], out var deviceId, out var secret))
+            return Results.Json(new { code = "device.unauthorized", message = "Missing or malformed device key." }, statusCode: 401);
+        var device = await devices.FindByIdAsync(deviceId, ct);
+        if (device is null || device.Revoked || !DeviceAuth.SecretMatches(secret, device.KeyHash))
+            return Results.Json(new { code = "device.unauthorized", message = "Unknown, revoked, or invalid device key." }, statusCode: 401);
+        var active = await config.GetActiveConfigAsync(device.TenantId, ct);
+        if (active is null)
+            return Results.Json(new { code = "config.no_bundle", message = "No bundle published." }, statusCode: 404);
+        var etag = $"W/\"{active.BundleVersion}\"";
+        if (http.Request.Headers.IfNoneMatch.Any(v => v is not null && v.Trim() == etag))
+            return Results.StatusCode(StatusCodes.Status304NotModified);
+        http.Response.Headers.ETag = etag;
+        return Results.Json(new
+        {
+            bundleVersion = active.BundleVersion,
+            bundle = JsonSerializer.Deserialize<JsonElement>(active.BundleDocument),
+            policies = active.Policies.Select(p => new
+            {
+                id = p.Id,
+                levels = JsonSerializer.Deserialize<JsonElement>(p.LevelsJson),
+                recipients = JsonSerializer.Deserialize<JsonElement>(p.RecipientsJson),
+            }).ToList(),
+        });
     }
 
     public static async Task<IResult> ListDevicesAsync(
