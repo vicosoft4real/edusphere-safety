@@ -1,0 +1,121 @@
+# Local pilot stack. Cloud services default; edge appliance services are
+# behind the `edge` profile (they run on the school LAN, not in the cloud).
+#
+#   docker compose up -d postgres minio api worker web
+#   docker compose --profile edge up -d edge-agent simulator
+#
+# Required secrets (see docs/operator-notes.md) — provide via environment or
+# an adjacent .env file; the placeholders below fail fast by design.
+name: edusphere-safety
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: safety
+      POSTGRES_USER: safety
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safety -d safety"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      Postgres__ConnectionString: Host=postgres;Database=safety;Username=safety;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      Storage__Backend: S3
+      Storage__Endpoint: http://minio:9000
+      Storage__Bucket: ${S3_BUCKET:-safety-evidence}
+      Storage__Region: us-east-1
+      Storage__AccessKey: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      Storage__SecretKey: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+      Storage__ForcePathStyle: "true"
+      Auth__Issuer: ${OIDC_ISSUER:?set OIDC_ISSUER}
+      Auth__Audience: ${OIDC_AUDIENCE:?set OIDC_AUDIENCE}
+      Auth__IssuerSigningKey: ${OIDC_SIGNING_KEY:?set OIDC_SIGNING_KEY}
+      Auth__Authority: ${OIDC_AUTHORITY:?set OIDC_AUTHORITY}
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      Postgres__ConnectionString: Host=postgres;Database=safety;Username=safety;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      Storage__Backend: S3
+      Storage__Endpoint: http://minio:9000
+      Storage__Bucket: ${S3_BUCKET:-safety-evidence}
+      Storage__Region: us-east-1
+      Storage__AccessKey: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      Storage__SecretKey: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+      Storage__ForcePathStyle: "true"
+      Email__Host: ${SMTP_HOST:?set SMTP_HOST or Email__PickupDirectory}
+      Email__Port: ${SMTP_PORT:-25}
+      Email__From: ${EMAIL_FROM:-safety@localhost}
+      Notification__To: ${NOTIFY_TO:?set NOTIFY_TO}
+      Retention__ClipDays: ${RETENTION_CLIP_DAYS:-30}
+      Retention__SnapshotDays: ${RETENTION_SNAPSHOT_DAYS:-90}
+      Retention__AuditDays: ${RETENTION_AUDIT_DAYS:-365}
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      SAFETY_API_URL: http://api:8080
+
+  edge-agent:
+    profiles: ["edge"]
+    build:
+      context: .
+      dockerfile: docker/edgeagent.Dockerfile
+    volumes:
+      - evidence-spool:/evidence-spool
+    environment:
+      SAFETY_CLOUD_URL: ${SAFETY_CLOUD_URL:?set SAFETY_CLOUD_URL for the edge agent}
+
+  simulator:
+    profiles: ["edge"]
+    build:
+      context: .
+      dockerfile: docker/simulator.Dockerfile
+
+volumes:
+  pgdata:
+  miniodata:
+  evidence-spool:
