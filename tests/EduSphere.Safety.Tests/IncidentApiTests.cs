@@ -135,6 +135,7 @@ public sealed class FakeApiDeviceStore : IDeviceStore
 {
     public Dictionary<string, DeviceRecord> Devices { get; } = new();
     public HashSet<(string TenantId, string UserId)> Members { get; } = new();
+    public Dictionary<string, (string TenantId, string? CampusId, DateTimeOffset Expires, bool Used)> Codes { get; } = new();
 
     public Task<DeviceRecord?> FindByIdAsync(string deviceId, CancellationToken ct) =>
         Task.FromResult(Devices.TryGetValue(deviceId, out var d) ? d : null);
@@ -142,10 +143,53 @@ public sealed class FakeApiDeviceStore : IDeviceStore
     public Task<bool> IsTenantMemberAsync(string tenantId, string userId, CancellationToken ct) =>
         Task.FromResult(Members.Contains((tenantId, userId)));
 
+    public Task CreateEnrolCodeAsync(
+        string tenantId, string? campusId, string codeHash,
+        DateTimeOffset expiresAt, string createdBy, CancellationToken ct)
+    {
+        Codes[codeHash] = (tenantId, campusId, expiresAt, false);
+        return Task.CompletedTask;
+    }
+
+    public Task<EnrolGrant?> ConsumeEnrolCodeAsync(string codeHash, DateTimeOffset nowUtc, CancellationToken ct)
+    {
+        if (!Codes.TryGetValue(codeHash, out var c) || c.Used || c.Expires <= nowUtc)
+            return Task.FromResult<EnrolGrant?>(null);
+        Codes[codeHash] = (c.TenantId, c.CampusId, c.Expires, true);
+        return Task.FromResult<EnrolGrant?>(new EnrolGrant(c.TenantId, c.CampusId));
+    }
+
+    public Task RegisterDeviceAsync(DeviceRecord device, CancellationToken ct)
+    {
+        Devices[device.DeviceId] = device;
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> RotateSecretAsync(string tenantId, string deviceId, string newKeyHash, CancellationToken ct)
+    {
+        if (!Devices.TryGetValue(deviceId, out var d) || d.TenantId != tenantId)
+            return Task.FromResult(false);
+        Devices[deviceId] = d with { KeyHash = newKeyHash };
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> SetRevokedAsync(string tenantId, string deviceId, bool revoked, CancellationToken ct)
+    {
+        if (!Devices.TryGetValue(deviceId, out var d) || d.TenantId != tenantId)
+            return Task.FromResult(false);
+        Devices[deviceId] = d with { Revoked = revoked };
+        return Task.FromResult(true);
+    }
+
+    public Task<IReadOnlyList<DeviceRecord>> ListAsync(string tenantId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<DeviceRecord>>(
+            Devices.Values.Where(d => d.TenantId == tenantId).ToList());
+
     public void Reset()
     {
         Devices.Clear();
         Members.Clear();
+        Codes.Clear();
     }
 }
 

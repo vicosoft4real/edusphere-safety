@@ -1,6 +1,6 @@
 namespace EduSphere.Safety.Application;
 
-public sealed record DeviceRecord(string TenantId, string DeviceId, string KeyHash, bool Revoked);
+public sealed record DeviceRecord(string TenantId, string DeviceId, string KeyHash, bool Revoked, string? CampusId = null);
 
 /// <summary>
 /// Device + membership lookups backing Task 5 auth. Devices PK is
@@ -13,4 +13,22 @@ public interface IDeviceStore
     Task<DeviceRecord?> FindByIdAsync(string deviceId, CancellationToken ct);
 
     Task<bool> IsTenantMemberAsync(string tenantId, string userId, CancellationToken ct);
+
+    Task CreateEnrolCodeAsync(
+        string tenantId, string? campusId, string codeHash,
+        DateTimeOffset expiresAt, string createdBy, CancellationToken ct);
+
+    /// <summary>
+    /// Atomically consumes a live code (marks used iff unused and unexpired)
+    /// and returns its grant; null when unknown, expired, or already used.
+    /// </summary>
+    Task<EnrolGrant?> ConsumeEnrolCodeAsync(string codeHash, DateTimeOffset nowUtc, CancellationToken ct);
+
+    Task RegisterDeviceAsync(DeviceRecord device, CancellationToken ct);
+
+    Task<bool> RotateSecretAsync(string tenantId, string deviceId, string newKeyHash, CancellationToken ct);
+
+    Task<bool> SetRevokedAsync(string tenantId, string deviceId, bool revoked, CancellationToken ct);
+
+    Task<IReadOnlyList<DeviceRecord>> ListAsync(string tenantId, CancellationToken ct);
 }

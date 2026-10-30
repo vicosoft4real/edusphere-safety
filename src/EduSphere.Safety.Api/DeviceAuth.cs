@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using EduSphere.Safety.Shared;
 
 namespace EduSphere.Safety.Api;
 
@@ -28,18 +27,8 @@ public static class DeviceAuth
         return deviceId.Length > 0 && secret.Length > 0;
     }
 
-    public static string HashSecret(string secret)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(secret));
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
+    public static string HashSecret(string secret) => Secrets.Sha256Hex(secret);
 
-    public static bool SecretMatches(string secret, string? storedKeyHash)
-    {
-        var computed = Encoding.UTF8.GetBytes(HashSecret(secret));
-        var stored = Encoding.UTF8.GetBytes((storedKeyHash ?? string.Empty).ToLowerInvariant());
-        if (computed.Length != stored.Length)
-            return false;
-        return CryptographicOperations.FixedTimeEquals(computed, stored);
-    }
+    public static bool SecretMatches(string secret, string? storedKeyHash) =>
+        Secrets.FixedTimeEqualsHex(HashSecret(secret), storedKeyHash ?? string.Empty);
 }

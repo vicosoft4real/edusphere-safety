@@ -17,6 +17,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISender, Sender>();
         services.AddTransient<ICommandHandler<CreateIncidentCommand, Guid>, CreateIncidentHandler>();
         services.AddTransient<ICommandHandler<TransitionIncidentCommand, Guid>, TransitionIncidentHandler>();
+        services.AddTransient<ICommandHandler<CreateEnrolCodeCommand, string>, CreateEnrolCodeHandler>();
+        services.AddTransient<ICommandHandler<EnrolDeviceCommand, EnrolResult>, EnrolDeviceHandler>();
+        services.AddTransient<ICommandHandler<RotateDeviceSecretCommand, string>, RotateDeviceSecretHandler>();
+        services.AddTransient<ICommandHandler<RevokeDeviceCommand, bool>, RevokeDeviceHandler>();
         return services;
     }
 }

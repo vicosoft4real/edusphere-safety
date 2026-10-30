@@ -82,6 +82,7 @@ public static class ApiApp
         app.UseAuthentication();
         app.UseAuthorization();
         IncidentsEndpoints.Map(app);
+        DeviceEndpoints.Map(app);
         return app;
     }
 

@@ -13,6 +13,8 @@ public static class ErrorMapper
         "incident.not_found" => StatusCodes.Status404NotFound,
         "incident.concurrency_conflict" => StatusCodes.Status409Conflict,
         "validation.failed" => StatusCodes.Status400BadRequest,
+        "device.not_found" => StatusCodes.Status404NotFound,
+        "device.enrol_invalid" => StatusCodes.Status400BadRequest,
         _ when code.StartsWith("incident.", StringComparison.Ordinal) => StatusCodes.Status422UnprocessableEntity,
         _ => StatusCodes.Status500InternalServerError,
     };
