@@ -84,6 +84,7 @@ and drowning detection are explicitly out of scope.
 | Retention removes expired evidence | Proven (probe + job) |
 | Measured performance documented | Partial (`docs/edge-benchmark.md`); field footage pending |
 | CI green on latest commit | Pending connected CI run |
+| Sandbox-runnable unit suite (direct reflection runner — vstest needs TCP, TestServer/CreateBuilder hang here) | **Measured 2026-10-30: 449 pass, 0 product failures.** 58 factory/Testcontainers tests skipped (CI-gated); 1 fail is SkiaSharp native lib absent in sandbox (`Pipeline_WalkerMp4` decode test; passes where native deps exist). Covers edge pipeline, domain, handlers, dispatchers, retention, rate-limit policy. |
 | Full flow validated in Chrome | Pending (no browser automation in this environment) |
 | Deployment + operator docs | This file + operator notes + compose |
 
