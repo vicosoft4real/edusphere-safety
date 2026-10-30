@@ -4,7 +4,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using EduSphere.Safety.Api;
 using EduSphere.Safety.Application;
+using EduSphere.Safety.Core;
+using EduSphere.Safety.Infrastructure;
+using EduSphere.Safety.Worker;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 public sealed class Plan3ApiTests : IClassFixture<SafetyApiFactory>
@@ -720,5 +724,111 @@ public sealed class Plan3HeartbeatApiTests : IClassFixture<SafetyApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("validation.failed", doc.GetProperty("code").GetString());
+    }
+}
+
+public sealed class Plan3RetentionApiTests : IClassFixture<SafetyApiFactory>
+{
+    private readonly SafetyApiFactory _factory;
+
+    public Plan3RetentionApiTests(SafetyApiFactory factory)
+    {
+        _factory = factory;
+        factory.Stores.Reset();
+        factory.Stores.Devices.Members.Add(("t1", "staff-1"));
+        factory.Stores.Devices.Members.Add(("t2", "staff-2"));
+    }
+
+    private HttpClient UserClient(string tenantId = "t1", string userId = "staff-1")
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", SafetyApiFactory.UserToken(tenantId, userId));
+        return client;
+    }
+
+    private RetentionJob Job()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IEvidenceStore>(_factory.Stores.Evidence);
+        services.AddSingleton(new RetentionOptions());
+        services.AddSingleton(new PostgresOptions());
+        services.AddSingleton<RetentionJob>();
+        return services.BuildServiceProvider().GetRequiredService<RetentionJob>();
+    }
+
+    private static EvidenceManifest Manifest(
+        string tenant, string edge, string kind, string key,
+        DateTimeOffset? uploadedAt, DateTimeOffset? expiresAt, Guid? incidentId = null) =>
+        new(tenant, edge, incidentId, key, kind, "campus-a", "cam-1",
+            1024, new string('b', 64), uploadedAt, expiresAt, DateTimeOffset.UtcNow.AddDays(-40));
+
+    [Fact]
+    public async Task Retention_ExpiredClip_DeletesObjectAndRow_KeepsIncident()
+    {
+        var incidentId = Guid.NewGuid();
+        await _factory.Stores.Incidents.AddAsync(
+            Incident.Rehydrate(incidentId, "t1", "campus-a", "zone-intrusion", "cam-1",
+                "evt-old", IncidentState.New, 1),
+            new OutboxEntry("t1", "test", "{}"), CancellationToken.None);
+        _factory.Stores.Evidence.Manifests[("t1", "evt-old", "clip")] =
+            Manifest("t1", "evt-old", "clip", "t1/campus-a/cam-1/2026-09-01/evt-old.clip.mp4",
+                DateTimeOffset.UtcNow.AddDays(-40), DateTimeOffset.UtcNow.AddDays(-39), incidentId);
+
+        var result = await Job().RunOnceAsync(CancellationToken.None);
+
+        Assert.Equal(1, result.ClipsDeleted);
+        Assert.Contains(
+            "t1/campus-a/cam-1/2026-09-01/evt-old.clip.mp4",
+            _factory.Stores.Evidence.DeletedKeys);
+        Assert.False(_factory.Stores.Evidence.Manifests.ContainsKey(("t1", "evt-old", "clip")));
+        Assert.NotNull(await _factory.Stores.Incidents.GetAsync("t1", incidentId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Retention_Unexpired_Untouched()
+    {
+        _factory.Stores.Evidence.Manifests[("t1", "evt-fresh", "clip")] =
+            Manifest("t1", "evt-fresh", "clip", "t1/campus-a/cam-1/2026-10-29/evt-fresh.clip.mp4",
+                DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow.AddMinutes(5));
+
+        var result = await Job().RunOnceAsync(CancellationToken.None);
+
+        Assert.Equal(0, result.ClipsDeleted);
+        Assert.Empty(_factory.Stores.Evidence.DeletedKeys);
+        Assert.True(_factory.Stores.Evidence.Manifests.ContainsKey(("t1", "evt-fresh", "clip")));
+    }
+
+    [Fact]
+    public async Task Retention_AbandonedUploadWindow_SweepsRow()
+    {
+        _factory.Stores.Evidence.Manifests[("t1", "evt-abandoned", "snapshot")] =
+            Manifest("t1", "evt-abandoned", "snapshot", "t1/campus-a/cam-1/2026-10-29/evt-abandoned.snapshot.jpg",
+                null, DateTimeOffset.UtcNow.AddHours(-1));
+
+        var result = await Job().RunOnceAsync(CancellationToken.None);
+
+        Assert.Equal(1, result.AbandonedDeleted);
+        Assert.False(_factory.Stores.Evidence.Manifests.ContainsKey(("t1", "evt-abandoned", "snapshot")));
+    }
+
+    [Fact]
+    public async Task AccessLog_TenantScoped()
+    {
+        await _factory.Stores.Evidence.LogAccessAsync(
+            new AccessLogRow("t1", "t1", "t1/key1", "staff-1", DateTimeOffset.UtcNow),
+            CancellationToken.None);
+        await _factory.Stores.Evidence.LogAccessAsync(
+            new AccessLogRow("t2", "t2", "t2/key2", "staff-2", DateTimeOffset.UtcNow),
+            CancellationToken.None);
+
+        var list = await (await UserClient().GetAsync("/v1/evidence/access-log"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+
+        var keys = list.GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("objectKey").GetString()).ToList();
+        Assert.Contains("t1/key1", keys);
+        Assert.DoesNotContain("t2/key2", keys);
     }
 }

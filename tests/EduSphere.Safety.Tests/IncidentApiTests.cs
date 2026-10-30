@@ -351,6 +351,7 @@ public sealed class FakeApiEvidenceStore : IEvidenceStore
 {
     public Dictionary<(string Tenant, string EdgeEvent, string Kind), EvidenceManifest> Manifests { get; } = new();
     public List<AccessLogRow> AccessLog { get; } = new();
+    public List<string> DeletedKeys { get; } = new();
 
     public Task RegisterManifestAsync(EvidenceManifest manifest, CancellationToken ct)
     {
@@ -384,14 +385,44 @@ public sealed class FakeApiEvidenceStore : IEvidenceStore
     public Task<string> MintGetUrlAsync(string tenantId, string objectKey, DateTimeOffset expiresAtUtc, CancellationToken ct) =>
         Task.FromResult($"https://evidence.local/get/{objectKey}?sig=test");
 
-    public Task DeleteAsync(string objectKey, CancellationToken ct) => Task.CompletedTask;
+    public Task DeleteAsync(string objectKey, CancellationToken ct)
+    {
+        DeletedKeys.Add(objectKey);
+        return Task.CompletedTask;
+    }
 
     public Task<bool> ExistsAsync(string objectKey, CancellationToken ct) => Task.FromResult(false);
+
+    public Task<IReadOnlyList<EvidenceManifest>> ListExpiredManifestsAsync(
+        DateTimeOffset clipsOlderThanUtc, DateTimeOffset snapshotsOlderThanUtc, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<EvidenceManifest>>(Manifests.Values
+            .Where(m => m.UploadedAt.HasValue
+                && (m.Kind == "clip" ? m.UploadedAt <= clipsOlderThanUtc : m.UploadedAt <= snapshotsOlderThanUtc))
+            .OrderBy(m => m.UploadedAt).ToList());
+
+    public Task<IReadOnlyList<EvidenceManifest>> ListAbandonedManifestsAsync(
+        DateTimeOffset uploadExpiredBeforeUtc, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<EvidenceManifest>>(Manifests.Values
+            .Where(m => !m.UploadedAt.HasValue && m.ExpiresAt.HasValue && m.ExpiresAt <= uploadExpiredBeforeUtc)
+            .OrderBy(m => m.ExpiresAt).ToList());
+
+    public Task DeleteManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct)
+    {
+        Manifests.Remove((tenantId, edgeEventId, kind));
+        return Task.CompletedTask;
+    }
+
+    public Task<int> PurgeAccessLogAsync(DateTimeOffset accessedBeforeUtc, CancellationToken ct)
+    {
+        var purged = AccessLog.RemoveAll(r => r.AccessedAt < accessedBeforeUtc);
+        return Task.FromResult(purged);
+    }
 
     public void Reset()
     {
         Manifests.Clear();
         AccessLog.Clear();
+        DeletedKeys.Clear();
     }
 }
 

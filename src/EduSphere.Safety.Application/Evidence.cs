@@ -85,6 +85,25 @@ public interface IEvidenceStore
     Task<string> MintGetUrlAsync(string tenantId, string objectKey, DateTimeOffset expiresAtUtc, CancellationToken ct);
     Task DeleteAsync(string objectKey, CancellationToken ct);
     Task<bool> ExistsAsync(string objectKey, CancellationToken ct);
+
+    /// <summary>
+    /// Uploaded manifests past their kind retention cutoff. Never-uploaded
+    /// rows are NOT included here (see <see cref="ListAbandonedManifestsAsync"/>).
+    /// </summary>
+    Task<IReadOnlyList<EvidenceManifest>> ListExpiredManifestsAsync(
+        DateTimeOffset clipsOlderThanUtc, DateTimeOffset snapshotsOlderThanUtc, CancellationToken ct);
+
+    /// <summary>
+    /// Manifests never uploaded whose upload window (<c>expires_at</c>) has
+    /// passed. The presigned PUT URL is dead, so the row is garbage.
+    /// </summary>
+    Task<IReadOnlyList<EvidenceManifest>> ListAbandonedManifestsAsync(
+        DateTimeOffset uploadExpiredBeforeUtc, CancellationToken ct);
+
+    Task DeleteManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct);
+
+    /// <summary>Deletes access-log rows older than the cutoff. Returns the row count.</summary>
+    Task<int> PurgeAccessLogAsync(DateTimeOffset accessedBeforeUtc, CancellationToken ct);
 }
 
 public sealed record RegisterManifestCommand(

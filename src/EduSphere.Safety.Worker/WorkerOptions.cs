@@ -27,6 +27,22 @@ public sealed class EmailOptions
     public string From { get; set; } = "safety@localhost";
 }
 
+public sealed class RetentionOptions
+{
+    public const string SectionName = "Retention";
+
+    /// <summary>Days an uploaded clip is kept. Default 30.</summary>
+    public int ClipDays { get; set; } = 30;
+
+    /// <summary>Days an uploaded snapshot is kept. Default 90.</summary>
+    public int SnapshotDays { get; set; } = 90;
+
+    /// <summary>Days evidence access-log rows are kept. Default 365.</summary>
+    public int AuditDays { get; set; } = 365;
+}
+
+public sealed record RetentionResult(int ClipsDeleted, int AbandonedDeleted, int AccessLogPurged);
+
 public sealed class NotificationOptions
 {
     public const string SectionName = "Notification";

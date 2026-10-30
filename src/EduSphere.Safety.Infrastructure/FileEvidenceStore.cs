@@ -62,6 +62,20 @@ public sealed class FileEvidenceStore : IEvidenceStore
     public Task<bool> ExistsAsync(string objectKey, CancellationToken ct) =>
         Task.FromResult(File.Exists(ResolvePath(objectKey)));
 
+    public Task<IReadOnlyList<EvidenceManifest>> ListExpiredManifestsAsync(
+        DateTimeOffset clipsOlderThanUtc, DateTimeOffset snapshotsOlderThanUtc, CancellationToken ct) =>
+        _manifests.ListExpiredAsync(clipsOlderThanUtc, snapshotsOlderThanUtc, ct);
+
+    public Task<IReadOnlyList<EvidenceManifest>> ListAbandonedManifestsAsync(
+        DateTimeOffset uploadExpiredBeforeUtc, CancellationToken ct) =>
+        _manifests.ListAbandonedAsync(uploadExpiredBeforeUtc, ct);
+
+    public Task DeleteManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct) =>
+        _manifests.DeleteManifestAsync(tenantId, edgeEventId, kind, ct);
+
+    public Task<int> PurgeAccessLogAsync(DateTimeOffset accessedBeforeUtc, CancellationToken ct) =>
+        _manifests.PurgeAccessLogAsync(accessedBeforeUtc, ct);
+
     public bool TryValidateFileToken(string urlOrToken, string purpose, out string tenantId, out string objectKey)
     {
         tenantId = string.Empty;

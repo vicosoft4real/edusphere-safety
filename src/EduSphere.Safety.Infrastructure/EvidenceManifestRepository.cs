@@ -105,6 +105,62 @@ internal sealed class EvidenceManifestRepository(PostgresOptions options)
         return rows.Select(r => new AccessLogRow(r.TenantId, r.ManifestTenant, r.ObjectKey, r.ActorId, r.AccessedAt)).ToList();
     }
 
+    public async Task<IReadOnlyList<EvidenceManifest>> ListExpiredAsync(
+        DateTimeOffset clipsOlderThanUtc, DateTimeOffset snapshotsOlderThanUtc, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString());
+        await connection.OpenAsync(ct);
+        var rows = await connection.QueryAsync<ManifestRow>(
+            new CommandDefinition(
+                "SELECT tenant_id AS \"TenantId\", edge_event_id AS \"EdgeEventId\", incident_id AS \"IncidentId\", object_key AS \"ObjectKey\", kind AS \"Kind\", bytes AS \"Bytes\", sha256 AS \"Sha256\", uploaded_at AS \"UploadedAt\", expires_at AS \"ExpiresAt\", created_at AS \"CreatedAt\" FROM evidence_manifests WHERE uploaded_at IS NOT NULL AND ((kind = 'clip' AND uploaded_at <= @clip) OR (kind = 'snapshot' AND uploaded_at <= @snap)) ORDER BY uploaded_at LIMIT 500",
+                new { clip = clipsOlderThanUtc, snap = snapshotsOlderThanUtc },
+                cancellationToken: ct));
+        return rows.Select(Map).ToList();
+    }
+
+    public async Task<IReadOnlyList<EvidenceManifest>> ListAbandonedAsync(
+        DateTimeOffset uploadExpiredBeforeUtc, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString());
+        await connection.OpenAsync(ct);
+        var rows = await connection.QueryAsync<ManifestRow>(
+            new CommandDefinition(
+                "SELECT tenant_id AS \"TenantId\", edge_event_id AS \"EdgeEventId\", incident_id AS \"IncidentId\", object_key AS \"ObjectKey\", kind AS \"Kind\", bytes AS \"Bytes\", sha256 AS \"Sha256\", uploaded_at AS \"UploadedAt\", expires_at AS \"ExpiresAt\", created_at AS \"CreatedAt\" FROM evidence_manifests WHERE uploaded_at IS NULL AND expires_at IS NOT NULL AND expires_at <= @before ORDER BY expires_at LIMIT 500",
+                new { before = uploadExpiredBeforeUtc },
+                cancellationToken: ct));
+        return rows.Select(Map).ToList();
+    }
+
+    public async Task DeleteManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString());
+        await connection.OpenAsync(ct);
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                "DELETE FROM evidence_manifests WHERE tenant_id = @tenant AND edge_event_id = @edge AND kind = @kind",
+                new { tenant = tenantId, edge = edgeEventId, kind },
+                cancellationToken: ct));
+    }
+
+    public async Task<int> PurgeAccessLogAsync(DateTimeOffset accessedBeforeUtc, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString());
+        await connection.OpenAsync(ct);
+        return await connection.ExecuteAsync(
+            new CommandDefinition(
+                "DELETE FROM evidence_access_log WHERE accessed_at < @before",
+                new { before = accessedBeforeUtc },
+                cancellationToken: ct));
+    }
+
+    private static EvidenceManifest Map(ManifestRow row)
+    {
+        var (campus, camera) = SplitKey(row.ObjectKey);
+        return new EvidenceManifest(
+            row.TenantId, row.EdgeEventId, row.IncidentId, row.ObjectKey, row.Kind,
+            campus, camera, row.Bytes, row.Sha256, row.UploadedAt, row.ExpiresAt, row.CreatedAt);
+    }
+
     private string ConnectionString() =>
         string.IsNullOrWhiteSpace(_options.ConnectionString)
             ? throw new InvalidOperationException("PostgresOptions.ConnectionString is not configured.")

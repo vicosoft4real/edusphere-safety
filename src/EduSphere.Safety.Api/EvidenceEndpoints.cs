@@ -23,6 +23,7 @@ public static class EvidenceEndpoints
         app.MapGet("/v1/evidence/file-download", GetFileDownloadAsync);
 
         var staff = app.MapGroup("/v1/evidence").RequireAuthorization();
+        staff.MapGet("/access-log", GetAccessLogAsync);
         staff.MapGet("/{edgeEventId}/{kind}", GetPlaybackAsync);
     }
 
@@ -69,6 +70,27 @@ public static class EvidenceEndpoints
         if (!result.IsSuccess)
             return ErrorMapper.ToResult(result.Error!);
         return Results.Json(new { uploaded = true });
+    }
+
+    public static async Task<IResult> GetAccessLogAsync(
+        HttpContext http,
+        IEvidenceStore store,
+        IDeviceStore devices,
+        CancellationToken ct)
+    {
+        var tenant = await StaffTenant.ResolveAsync(http, devices, ct);
+        if (!tenant.IsSuccess)
+            return tenant.Failure!;
+        var rows = await store.ListAccessLogAsync(tenant.TenantId!, ct);
+        return Results.Json(new
+        {
+            items = rows.Select(r => new
+            {
+                objectKey = r.ObjectKey,
+                actorId = r.ActorId,
+                accessedAt = r.AccessedAt,
+            }).ToList(),
+        });
     }
 
     public static async Task<IResult> GetPlaybackAsync(

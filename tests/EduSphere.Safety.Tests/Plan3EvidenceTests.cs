@@ -157,6 +157,31 @@ public sealed class Plan3EvidenceTests
         public Task DeleteAsync(string objectKey, CancellationToken ct) => Task.CompletedTask;
 
         public Task<bool> ExistsAsync(string objectKey, CancellationToken ct) => Task.FromResult(false);
+
+        public Task<IReadOnlyList<EvidenceManifest>> ListExpiredManifestsAsync(
+            DateTimeOffset clipsOlderThanUtc, DateTimeOffset snapshotsOlderThanUtc, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<EvidenceManifest>>(Manifests.Values
+                .Where(m => m.UploadedAt.HasValue
+                    && (m.Kind == "clip" ? m.UploadedAt <= clipsOlderThanUtc : m.UploadedAt <= snapshotsOlderThanUtc))
+                .OrderBy(m => m.UploadedAt).ToList());
+
+        public Task<IReadOnlyList<EvidenceManifest>> ListAbandonedManifestsAsync(
+            DateTimeOffset uploadExpiredBeforeUtc, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<EvidenceManifest>>(Manifests.Values
+                .Where(m => !m.UploadedAt.HasValue && m.ExpiresAt.HasValue && m.ExpiresAt <= uploadExpiredBeforeUtc)
+                .OrderBy(m => m.ExpiresAt).ToList());
+
+        public Task DeleteManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct)
+        {
+            Manifests.Remove((tenantId, edgeEventId, kind));
+            return Task.CompletedTask;
+        }
+
+        public Task<int> PurgeAccessLogAsync(DateTimeOffset accessedBeforeUtc, CancellationToken ct)
+        {
+            var purged = AccessLog.RemoveAll(r => r.AccessedAt < accessedBeforeUtc);
+            return Task.FromResult(purged);
+        }
     }
 
     private static RegisterManifestCommand ValidCommand() => new(

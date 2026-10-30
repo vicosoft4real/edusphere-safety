@@ -68,6 +68,20 @@ public sealed class S3EvidenceStore : IEvidenceStore
         return true;
     }
 
+    public Task<IReadOnlyList<EvidenceManifest>> ListExpiredManifestsAsync(
+        DateTimeOffset clipsOlderThanUtc, DateTimeOffset snapshotsOlderThanUtc, CancellationToken ct) =>
+        _manifests.ListExpiredAsync(clipsOlderThanUtc, snapshotsOlderThanUtc, ct);
+
+    public Task<IReadOnlyList<EvidenceManifest>> ListAbandonedManifestsAsync(
+        DateTimeOffset uploadExpiredBeforeUtc, CancellationToken ct) =>
+        _manifests.ListAbandonedAsync(uploadExpiredBeforeUtc, ct);
+
+    public Task DeleteManifestAsync(string tenantId, string edgeEventId, string kind, CancellationToken ct) =>
+        _manifests.DeleteManifestAsync(tenantId, edgeEventId, kind, ct);
+
+    public Task<int> PurgeAccessLogAsync(DateTimeOffset accessedBeforeUtc, CancellationToken ct) =>
+        _manifests.PurgeAccessLogAsync(accessedBeforeUtc, ct);
+
     private string Presign(string method, string objectKey, DateTimeOffset expiresAtUtc, int maxSeconds)
     {
         var ttl = expiresAtUtc - DateTimeOffset.UtcNow;

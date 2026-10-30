@@ -152,11 +152,11 @@ Rules (normative): on `incident.created` the Api ALSO inserts a level-0 immediat
 
 Rules: device-authed heartbeat `{softwareVersion, modelVersion, configVersion, queueDepth, diskUsedBytes}` updates the `002` columns + `last_heartbeat_at` (single `UPDATE`). Response: `{serverConfigVersion, configStale: device < server, serverTimeUtc}` — the agent uses `serverTimeUtc` for clock-skew tracking (brief §7). Device list (staff) surfaces versions + `last_heartbeat_at` + stale flag; offline threshold is a presentation rule (device silent > N minutes = degraded, never "monitored"). Validation reuses the heartbeat shape rules (finite age ≥ 0 etc., same codes as edge `HeartbeatClient.Build`).
 
-- [ ] **Step 1: Write failing tests** — heartbeat updates versions/seen-at; stale=true when behind; future configVersion is not stale; validation rejects non-finite age.
-- [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Verify** — compile 0/0; probe: heartbeat → list shows versions → publish bundle → heartbeat stale=true.
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write failing tests** — heartbeat updates versions/seen-at; stale=true when behind; future configVersion is not stale; validation rejects non-finite age. (`Plan3HeartbeatApiTests`: plan-literal rewrite after the divergent 007/diagnostics variant was removed.)
+- [x] **Step 2: Run to verify they fail.** — RED observed: missing `RecordHeartbeatAsync` / endpoint members (compile errors).
+- [x] **Step 3: Implement.** — `IDeviceStore.RecordHeartbeatAsync` (single `UPDATE` of the 002 version columns + `last_heartbeat_at`); `POST /v1/devices/heartbeat` (device auth, manual validation, `{serverConfigVersion, configStale, serverTimeUtc}`); list DTO extended with versions + `lastHeartbeatAt` + `staleConfig`.
+- [x] **Step 4: Verify** — Api + tests compile 0/0; direct-drive probe 20/20 PASS (heartbeat → list → publish → stale=true → future-not-stale; 400 `validation.failed` on negative age; 401 on bad secret); `dotnet test` stays a connected-CI gate.
+- [x] **Step 5: Commit.**
 
 ### Task 7: Retention, audit view, vertical-slice proof (TDD)
 
@@ -164,11 +164,11 @@ Rules: device-authed heartbeat `{softwareVersion, modelVersion, configVersion, q
 
 Rules: retention periods are Worker options (`Retention:ClipDays/SnapshotDays/AuditDays`, defaults 30/90/365) per deployment; per-tenant configuration is a later plan and is documented as such. `RetentionJob` (leased, daily): for expired manifests → `IEvidenceStore.DeleteAsync` object → delete manifest row; NEVER deletes `incident`/`incident_activity` rows (metadata outlives media; `incident_id` FK is `ON DELETE SET NULL` the other way). Access-log rows older than audit retention are deleted; the job logs counts. Vertical slice (manual + recorded): simulator edge event → ingest → incident + email (pickup dir) → staff ack via PATCH → escalation cancelled; evidence manifest → upload → mediated download with audit row. Record commands + outputs in the task report.
 
-- [ ] **Step 1: Write failing tests** — expired clip object deleted + row gone, incident row survives; unexpired untouched; access-log view is tenant-scoped.
-- [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Verify** — compile 0/0; full vertical slice recorded; `docs/` operator notes updated (env vars: `Storage:*`, `Retention:*`, enrol TTL).
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write failing tests** — expired clip object deleted + row gone, incident row survives; unexpired untouched; access-log view is tenant-scoped. (`Plan3RetentionApiTests`: 4 tests + abandoned-sweep case.)
+- [x] **Step 2: Run to verify they fail.** — RED observed: `RetentionJob` not found (compile error).
+- [x] **Step 3: Implement.** — `IEvidenceStore` + repo + both backends: `ListExpiredManifestsAsync` (uploaded + kind cutoff), `ListAbandonedManifestsAsync` (never-uploaded + window passed), `DeleteManifestAsync`, `PurgeAccessLogAsync`; `RetentionJob` (Worker, daily, advisory lease, object-then-row, incidents never touched) + `RetentionOptions` (30/90/365); `GET /v1/evidence/access-log` (staff, tenant-scoped).
+- [x] **Step 4: Verify** — Api + Worker + tests compile 0/0; vertical-slice probe 17/17 PASS (ingest → email pickup → ack → escalation cancelled → manifest → complete → playback 302 + audit → access-log → retention deletes expired, incident survives); `docs/operator-notes.md` created (env vars: `Storage:*`, `Retention:*`, enrol TTL).
+- [x] **Step 5: Commit.**
 
 ---
 

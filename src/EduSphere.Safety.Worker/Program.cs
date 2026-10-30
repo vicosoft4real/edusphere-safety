@@ -15,15 +15,26 @@ builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailO
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<EmailOptions>>().Value);
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection(NotificationOptions.SectionName));
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<NotificationOptions>>().Value);
+builder.Services.Configure<RetentionOptions>(builder.Configuration.GetSection(RetentionOptions.SectionName));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<RetentionOptions>>().Value);
+
+var storage = builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();
+StorageOptions.Validate(storage);
+builder.Services.AddSingleton(storage);
 
 builder.Services.AddSharedKernel();
 builder.Services.AddScoped<IOutboxDispatcherStore, OutboxDispatcherStore>();
 builder.Services.AddScoped<IIncidentStore, IncidentRepository>();
 builder.Services.AddScoped<IConfigStore, ConfigStore>();
 builder.Services.AddScoped<INotificationStore, NotificationStore>();
+if (string.Equals(storage.Backend, "S3", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddScoped<IEvidenceStore, S3EvidenceStore>();
+else
+    builder.Services.AddScoped<IEvidenceStore, FileEvidenceStore>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHostedService<OutboxDispatcher>();
 builder.Services.AddHostedService<EscalationDispatcher>();
+builder.Services.AddHostedService<RetentionJob>();
 
 var host = builder.Build();
 
