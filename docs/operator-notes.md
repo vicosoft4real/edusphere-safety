@@ -33,9 +33,18 @@ Use `__` (double underscore) as the section separator, e.g.
 | `Retention__ClipDays` | Worker | No | `30` | Deployment choice | Clamped to ≥1; per-tenant retention is a later plan |
 | `Retention__SnapshotDays` | Worker | No | `90` | Deployment choice | Clamped to ≥1 |
 | `Retention__AuditDays` | Worker | No | `365` | Deployment choice | Clamped to ≥1 |
+| `RateLimit__CodeGatedPermitLimit` | Api | No | `10` | Abuse ceiling for enrol-code redemption + dev-token minting | Requests/min per IP; clamped to ≥1 |
+| `RateLimit__CodeGatedWindowMinutes` | Api | No | `1` | Window for the above | Clamped to ≥1 min |
 | `Outbox__IntervalSeconds` | Worker | No | `5` | Deployment tuning | Dispatch loop cadence |
 | `Outbox__BatchSize` | Worker | No | `25` | Deployment tuning | Claim batch size |
 | `Outbox__LeaseSeconds` | Worker | No | `60` | Deployment tuning | Lease for claimed rows |
+
+## Abuse controls
+
+- Anonymous code/token endpoints (`POST /v1/devices/enrol`, dev-only
+  `POST /v1/auth/dev-token`) are throttled per IP (default 10/min, 429 +
+  `Retry-After`). Authenticated ingest/heartbeat/config-pull stay unthrottled.
+- Kestrel caps JSON bodies at 1 MiB (`MaxRequestBodySize`).
 
 ## Enrolment TTLs
 

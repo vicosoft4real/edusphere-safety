@@ -33,7 +33,7 @@ public static class IncidentsEndpoints
         // DEV STUB ONLY: minted HS256 tokens for local testing. Never mapped in
         // production (Auth:DevStubEnabled defaults false).
         if (auth?.DevStubEnabled == true)
-            app.MapPost("/v1/auth/dev-token", PostDevTokenAsync);
+            app.MapPost("/v1/auth/dev-token", PostDevTokenAsync).RequireRateLimiting(RateLimiting.CodeGatedPolicy);
         app.MapHub<SafetyHub>("/safety");
     }
 

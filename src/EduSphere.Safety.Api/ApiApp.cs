@@ -22,6 +22,10 @@ public static class ApiApp
         var builder = WebApplication.CreateBuilder(args);
         configureAppConfig?.Invoke(builder.Configuration);
 
+        // Payload cap: every JSON body in this API is small (rules bundles are
+        // the largest legitimate payload by far); 1 MiB stops body-bloat abuse.
+        builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1_048_576);
+
         // Framework console logging (Serilog is a later plan).
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole();
@@ -86,10 +90,12 @@ public static class ApiApp
                 }
             });
         builder.Services.AddAuthorization();
+        builder.Services.AddSafetyRateLimiting(builder.Configuration);
 
         overrideServices?.Invoke(builder.Services);
 
         var app = builder.Build();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         IncidentsEndpoints.Map(app);

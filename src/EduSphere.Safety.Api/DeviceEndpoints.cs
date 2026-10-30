@@ -22,7 +22,7 @@ public static class DeviceEndpoints
         devices.MapPost("/{id}/revoke", PostRevokeAsync);
         // Enrol is code-gated, not bearer-gated: the single-use short-lived
         // code IS the credential. Rate limiting is CI-hardening (noted, not claimed).
-        app.MapPost("/v1/devices/enrol", PostEnrolAsync);
+        app.MapPost("/v1/devices/enrol", PostEnrolAsync).RequireRateLimiting(RateLimiting.CodeGatedPolicy);
         app.MapPost("/v1/devices/rotate", PostRotateAsync);
         app.MapGet("/v1/devices/config", GetConfigAsync);
         app.MapPost("/v1/devices/heartbeat", PostHeartbeatAsync);

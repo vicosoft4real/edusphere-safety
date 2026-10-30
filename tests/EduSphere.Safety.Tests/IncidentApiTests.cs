@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-public sealed class SafetyApiFactory : WebApplicationFactory<Program>
+public class SafetyApiFactory : WebApplicationFactory<Program>
 {
     public const string SigningKey = "local-dev-only-32-bytes-minimum-key!!";
     public const string Issuer = "edusphere-dev";
@@ -22,6 +22,9 @@ public sealed class SafetyApiFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("Auth:DevStubEnabled", "true");
         builder.UseSetting("Auth:IssuerSigningKey", SigningKey);
+        // High ceiling so suites that enrol repeatedly never trip the throttle;
+        // RateLimitTests sets its own low ceiling via ThrottledFactory.
+        builder.UseSetting("RateLimit:CodeGatedPermitLimit", "1000");
         builder.UseSetting("Auth:Issuer", Issuer);
         builder.UseSetting("Auth:Audience", Audience);
         builder.ConfigureServices(services =>
