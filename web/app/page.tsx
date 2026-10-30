@@ -33,6 +33,18 @@ export default async function OverviewPage() {
           <Link href="/incidents" className="underline">
             Incidents
           </Link>
+          <Link href="/devices" className="underline">
+            Devices
+          </Link>
+          <Link href="/cameras" className="underline">
+            Cameras
+          </Link>
+          <Link href="/rules" className="underline">
+            Rules
+          </Link>
+          <Link href="/policies" className="underline">
+            Notifications
+          </Link>
           <Link href="/login" className="text-stone-500">
             Switch user
           </Link>
