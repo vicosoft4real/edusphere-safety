@@ -39,6 +39,7 @@ public static class ApiApp
         builder.Services.AddSharedKernel();
         builder.Services.AddScoped<IIncidentStore, IncidentRepository>();
         builder.Services.AddScoped<IDeviceStore, DeviceStore>();
+        builder.Services.AddScoped<ICameraStore, CameraStore>();
         builder.Services.AddSingleton<IIncidentBroadcaster, SignalRIncidentBroadcaster>();
         builder.Services.AddSignalR();
 
@@ -83,6 +84,7 @@ public static class ApiApp
         app.UseAuthorization();
         IncidentsEndpoints.Map(app);
         DeviceEndpoints.Map(app);
+        CameraEndpoints.Map(app);
         return app;
     }
 

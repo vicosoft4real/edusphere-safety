@@ -20,6 +20,7 @@
     <ProjectReference Include="../EduSphere.Safety.Core/EduSphere.Safety.Core.csproj" />
     <ProjectReference Include="../EduSphere.Safety.Application/EduSphere.Safety.Application.csproj" />
     <ProjectReference Include="../EduSphere.Safety.Infrastructure/EduSphere.Safety.Infrastructure.csproj" />
+    <ProjectReference Include="../EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
   </ItemGroup>
 
 </Project>

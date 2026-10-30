@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="../EduSphere.Safety.Shared/EduSphere.Safety.Shared.csproj" />
     <ProjectReference Include="../EduSphere.Safety.Core/EduSphere.Safety.Core.csproj" />
+    <ProjectReference Include="../EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
   </ItemGroup>
 
 </Project>

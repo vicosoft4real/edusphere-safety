@@ -29,6 +29,7 @@ public sealed class SafetyApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IIncidentStore>(Stores.Incidents);
             services.AddSingleton<IDeviceStore>(Stores.Devices);
             services.AddSingleton<IIncidentBroadcaster>(Stores.Broadcast);
+            services.AddSingleton<ICameraStore>(Stores.Cameras);
         });
     }
 
@@ -43,13 +44,59 @@ public sealed class FakeApiStores
     public FakeApiIncidentStore Incidents { get; } = new();
     public FakeApiDeviceStore Devices { get; } = new();
     public RecordingBroadcaster Broadcast { get; } = new();
+    public FakeApiCameraStore Cameras { get; } = new();
 
     public void Reset()
     {
         Incidents.Reset();
         Devices.Reset();
         Broadcast.Reset();
+        Cameras.Reset();
     }
+}
+
+public sealed class FakeApiCameraStore : ICameraStore
+{
+    public Dictionary<string, CameraRecord> Cameras { get; } = new();
+
+    private static string Key(string tenantId, string cameraId) => $"{tenantId}\0{cameraId}";
+
+    public Task InsertAsync(CameraRecord camera, CancellationToken ct)
+    {
+        Cameras[Key(camera.TenantId, camera.CameraId)] = camera;
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> ReplaceAsync(CameraRecord camera, CancellationToken ct)
+    {
+        var key = Key(camera.TenantId, camera.CameraId);
+        if (!Cameras.ContainsKey(key))
+            return Task.FromResult(false);
+        Cameras[key] = camera;
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteAsync(string tenantId, string cameraId, CancellationToken ct) =>
+        Task.FromResult(Cameras.Remove(Key(tenantId, cameraId)));
+
+    public Task<CameraRecord?> FindAsync(string tenantId, string cameraId, CancellationToken ct) =>
+        Task.FromResult(Cameras.TryGetValue(Key(tenantId, cameraId), out var c) ? c : null);
+
+    public Task<IReadOnlyList<CameraRecord>> ListAsync(string tenantId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<CameraRecord>>(
+            Cameras.Values.Where(c => c.TenantId == tenantId).OrderBy(c => c.CameraId).ToList());
+
+    public Task<bool> ReportTestAsync(
+        string tenantId, string cameraId, bool ok, string detail, DateTimeOffset at, CancellationToken ct)
+    {
+        var key = Key(tenantId, cameraId);
+        if (!Cameras.TryGetValue(key, out var c))
+            return Task.FromResult(false);
+        Cameras[key] = c with { LastTestOk = ok, LastTestDetail = detail, LastTestAt = at };
+        return Task.FromResult(true);
+    }
+
+    public void Reset() => Cameras.Clear();
 }
 
 public sealed class FakeApiIncidentStore : IIncidentStore

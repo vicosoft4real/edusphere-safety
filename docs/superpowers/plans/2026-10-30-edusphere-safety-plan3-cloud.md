@@ -79,11 +79,11 @@ ALTER TABLE cameras ADD COLUMN IF NOT EXISTS last_test_at TIMESTAMPTZ NULL;
 
 Rules: `connection` holds ONLY non-secret descriptors (`{mode, host, port, path}` — never userinfo/password; validator rejects with `validation.failed` otherwise). Staff CRUD scoped `(tenant_id, id)`; `device_id` assignment must belong to the same tenant (FK already enforces). `POST /v1/cameras/{id}/test-report` is device-authed: camera must belong to the device tenant, else 404 (indistinguishable). Diagnostics `GET /v1/cameras` returns last-test fields; never emits credentials (there are none stored).
 
-- [ ] **Step 1: Write failing tests** — secret-bearing connection rejected; cross-tenant device assignment rejected; test-report from another tenant's device is 404; diagnostics contain no userinfo.
-- [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement** store + endpoints.
-- [ ] **Step 4: Verify** — compile 0/0; migration applies; probe: create → bad-URL rejected → report ok → diagnostics show ok.
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write failing tests** — secret-bearing connection rejected; cross-tenant device assignment rejected; test-report from another tenant's device is 404; diagnostics contain no userinfo.
+- [x] **Step 2: Run to verify they fail.**
+- [x] **Step 3: Implement** store + endpoints.
+- [x] **Step 4: Verify** — compile 0/0; migration applies; probe: create → bad-URL rejected → report ok → diagnostics show ok.
+- [x] **Step 5: Commit.**
 
 ### Task 3: Versioned config — bundles, policies, edge pull (TDD)
 

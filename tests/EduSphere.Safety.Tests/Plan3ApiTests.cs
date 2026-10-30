@@ -141,6 +141,123 @@ public sealed class Plan3ApiTests : IClassFixture<SafetyApiFactory>
     }
 
     [Fact]
+    public async Task Camera_CreateListReportDiagnostics_Flow()
+    {
+        var staff = UserClient();
+        var create = await staff.PostAsJsonAsync("/v1/cameras", new
+        {
+            campusId = "campus-a",
+            deviceId = (string?)null,
+            mode = "manual",
+            host = "192.168.1.20",
+            port = 554,
+            path = "/stream",
+        });
+        Assert.Equal(HttpStatusCode.OK, create.StatusCode);
+        var cameraId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var bad = await staff.PostAsJsonAsync("/v1/cameras", new
+        {
+            campusId = "campus-a",
+            deviceId = (string?)null,
+            mode = "manual",
+            host = "8.8.8.8",
+            port = 554,
+            path = "/stream",
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+
+        var secretCam = await staff.PostAsJsonAsync("/v1/cameras", new
+        {
+            campusId = "campus-a",
+            deviceId = (string?)null,
+            mode = "manual",
+            host = "ops:pw@192.168.1.20",
+            port = 554,
+            path = "/stream",
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, secretCam.StatusCode);
+
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var report = await DeviceClient($"{deviceId}.{secret}").PostAsJsonAsync(
+            $"/v1/cameras/{cameraId}/test-report", new { ok = true, detail = "edge-ok" });
+        Assert.Equal(HttpStatusCode.OK, report.StatusCode);
+
+        var list = await staff.GetAsync("/v1/cameras");
+        var doc = await list.Content.ReadFromJsonAsync<JsonElement>();
+        var item = doc.GetProperty("items").EnumerateArray().Single();
+        Assert.Equal(cameraId, item.GetProperty("id").GetString());
+        Assert.True(item.GetProperty("lastTestOk").GetBoolean());
+        var itemJson = item.ToString();
+        Assert.DoesNotContain("pw@", itemJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("ops:", itemJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("@192", itemJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Camera_TestReport_OtherTenantDevice_NotFound()
+    {
+        var staff = UserClient("t1");
+        var create = await staff.PostAsJsonAsync("/v1/cameras", new
+        {
+            campusId = "campus-a",
+            deviceId = (string?)null,
+            mode = "manual",
+            host = "10.0.0.9",
+            port = 554,
+            path = "/x",
+        });
+        var cameraId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        _factory.Stores.Devices.Members.Add(("t2", "staff-9"));
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient("t2", "staff-9"));
+        var report = await DeviceClient($"{deviceId}.{secret}").PostAsJsonAsync(
+            $"/v1/cameras/{cameraId}/test-report", new { ok = true, detail = "x" });
+        Assert.Equal(HttpStatusCode.NotFound, report.StatusCode);
+    }
+
+    [Fact]
+    public async Task Camera_ReplaceDelete_Flow()
+    {
+        var staff = UserClient();
+        var create = await staff.PostAsJsonAsync("/v1/cameras", new
+        {
+            campusId = "campus-a",
+            deviceId = (string?)null,
+            mode = "manual",
+            host = "10.0.0.9",
+            port = 554,
+            path = "/x",
+        });
+        var cameraId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var replace = await staff.PutAsJsonAsync($"/v1/cameras/{cameraId}", new
+        {
+            campusId = "campus-b",
+            deviceId = (string?)null,
+            mode = "onvif",
+            host = "10.0.0.10",
+            port = 8554,
+            path = "/live",
+        });
+        Assert.Equal(HttpStatusCode.OK, replace.StatusCode);
+
+        var missing = await staff.PutAsJsonAsync("/v1/cameras/cam-nope", new
+        {
+            campusId = "campus-b",
+            deviceId = (string?)null,
+            mode = "onvif",
+            host = "10.0.0.10",
+            port = 8554,
+            path = "/live",
+        });
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+
+        var delete = await staff.DeleteAsync($"/v1/cameras/{cameraId}");
+        Assert.Equal(HttpStatusCode.OK, delete.StatusCode);
+    }
+
+    [Fact]
     public async Task ListDevices_TenantScoped()
     {
         await EnrolDeviceAsync(UserClient("t1"));
