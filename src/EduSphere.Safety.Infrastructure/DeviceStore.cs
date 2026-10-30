@@ -16,10 +16,10 @@ public sealed class DeviceStore(PostgresOptions options) : IDeviceStore
         // lookup is by id alone. Full scan is acceptable for the pilot table size.
         var row = await connection.QuerySingleOrDefaultAsync<DeviceRow>(
             new CommandDefinition(
-                "SELECT tenant_id AS \"TenantId\", id AS \"DeviceId\", key_hash AS \"KeyHash\", revoked AS \"Revoked\", campus_id AS \"CampusId\" FROM devices WHERE id = @id",
+                "SELECT tenant_id AS \"TenantId\", id AS \"DeviceId\", key_hash AS \"KeyHash\", revoked AS \"Revoked\", campus_id AS \"CampusId\", software_version AS \"SoftwareVersion\", model_version AS \"ModelVersion\", config_version AS \"ConfigVersion\", last_heartbeat_at AS \"LastHeartbeatAt\" FROM devices WHERE id = @id",
                 new { id = deviceId },
                 cancellationToken: ct));
-        return row is null ? null : new DeviceRecord(row.TenantId, row.DeviceId, row.KeyHash, row.Revoked, row.CampusId);
+        return row is null ? null : new DeviceRecord(row.TenantId, row.DeviceId, row.KeyHash, row.Revoked, row.CampusId, row.SoftwareVersion, row.ModelVersion, row.ConfigVersion, row.LastHeartbeatAt);
     }
 
     public async Task<bool> IsTenantMemberAsync(string tenantId, string userId, CancellationToken ct)
@@ -102,10 +102,24 @@ public sealed class DeviceStore(PostgresOptions options) : IDeviceStore
         await connection.OpenAsync(ct);
         var rows = await connection.QueryAsync<DeviceRow>(
             new CommandDefinition(
-                "SELECT tenant_id AS \"TenantId\", id AS \"DeviceId\", key_hash AS \"KeyHash\", revoked AS \"Revoked\", campus_id AS \"CampusId\" FROM devices WHERE tenant_id = @tenant ORDER BY id",
+                "SELECT tenant_id AS \"TenantId\", id AS \"DeviceId\", key_hash AS \"KeyHash\", revoked AS \"Revoked\", campus_id AS \"CampusId\", software_version AS \"SoftwareVersion\", model_version AS \"ModelVersion\", config_version AS \"ConfigVersion\", last_heartbeat_at AS \"LastHeartbeatAt\" FROM devices WHERE tenant_id = @tenant ORDER BY id",
                 new { tenant = tenantId },
                 cancellationToken: ct));
-        return rows.Select(r => new DeviceRecord(r.TenantId, r.DeviceId, r.KeyHash, r.Revoked, r.CampusId)).ToList();
+        return rows.Select(r => new DeviceRecord(r.TenantId, r.DeviceId, r.KeyHash, r.Revoked, r.CampusId, r.SoftwareVersion, r.ModelVersion, r.ConfigVersion, r.LastHeartbeatAt)).ToList();
+    }
+
+    public async Task RecordHeartbeatAsync(
+        string tenantId, string deviceId,
+        string softwareVersion, string modelVersion, int configVersion,
+        CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(RequireConnectionString());
+        await connection.OpenAsync(ct);
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                "UPDATE devices SET software_version = @sw, model_version = @model, config_version = @cfg, last_heartbeat_at = now() WHERE tenant_id = @tenant AND id = @id",
+                new { sw = softwareVersion, model = modelVersion, cfg = configVersion, tenant = tenantId, id = deviceId },
+                cancellationToken: ct));
     }
 
     private string RequireConnectionString() =>
@@ -120,6 +134,10 @@ public sealed class DeviceStore(PostgresOptions options) : IDeviceStore
         public string KeyHash { get; set; } = string.Empty;
         public bool Revoked { get; set; }
         public string? CampusId { get; set; }
+        public string SoftwareVersion { get; set; } = string.Empty;
+        public string ModelVersion { get; set; } = string.Empty;
+        public int ConfigVersion { get; set; }
+        public DateTimeOffset? LastHeartbeatAt { get; set; }
     }
 
     private sealed class GrantRow

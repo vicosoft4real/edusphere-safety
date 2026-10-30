@@ -217,5 +217,24 @@ public sealed class Plan3DeviceTests
         public Task<IReadOnlyList<DeviceRecord>> ListAsync(string tenantId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<DeviceRecord>>(
                 _devices.Values.Where(d => d.TenantId == tenantId).ToList());
+
+        public Task RecordHeartbeatAsync(
+            string tenantId, string deviceId,
+            string softwareVersion, string modelVersion, int configVersion,
+            CancellationToken ct)
+        {
+            if (_devices.TryGetValue(deviceId, out var d) && d.TenantId == tenantId)
+            {
+                _devices[deviceId] = d with
+                {
+                    SoftwareVersion = softwareVersion,
+                    ModelVersion = modelVersion,
+                    ConfigVersion = configVersion,
+                    LastHeartbeatAt = DateTimeOffset.UtcNow,
+                };
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

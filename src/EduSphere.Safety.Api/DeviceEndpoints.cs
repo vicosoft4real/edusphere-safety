@@ -25,6 +25,7 @@ public static class DeviceEndpoints
         app.MapPost("/v1/devices/enrol", PostEnrolAsync);
         app.MapPost("/v1/devices/rotate", PostRotateAsync);
         app.MapGet("/v1/devices/config", GetConfigAsync);
+        app.MapPost("/v1/devices/heartbeat", PostHeartbeatAsync);
     }
 
     public static async Task<IResult> PostEnrolCodeAsync(
@@ -132,12 +133,15 @@ public static class DeviceEndpoints
     public static async Task<IResult> ListDevicesAsync(
         HttpContext http,
         IDeviceStore devices,
+        IConfigStore config,
         CancellationToken ct)
     {
         var tenant = await ResolveTenantAsync(http, devices, ct);
         if (!tenant.IsSuccess)
             return tenant.Failure!;
         var list = await devices.ListAsync(tenant.TenantId!, ct);
+        var active = await config.GetLatestBundleAsync(tenant.TenantId!, ct);
+        var serverVersion = active?.Version;
         // Key material never leaves the server: no secret, no hash in the DTO.
         return Results.Json(new
         {
@@ -147,8 +151,67 @@ public static class DeviceEndpoints
                 tenantId = d.TenantId,
                 campusId = d.CampusId,
                 revoked = d.Revoked,
+                softwareVersion = d.SoftwareVersion,
+                modelVersion = d.ModelVersion,
+                configVersion = d.ConfigVersion,
+                lastHeartbeatAt = d.LastHeartbeatAt,
+                staleConfig = serverVersion.HasValue && d.ConfigVersion < serverVersion.Value,
             }).ToList(),
         });
+    }
+
+    public sealed record HeartbeatRequest(
+        string SoftwareVersion,
+        string ModelVersion,
+        int ConfigVersion,
+        int QueueDepth,
+        double FrameAgeSeconds,
+        long DiskUsedBytes);
+
+    public static async Task<IResult> PostHeartbeatAsync(
+        HttpContext http,
+        HeartbeatRequest body,
+        IDeviceStore devices,
+        IConfigStore config,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        if (!DeviceAuth.TryParseHeader(http.Request.Headers[DeviceAuth.HeaderName], out var deviceId, out var secret))
+            return Results.Json(new { code = "device.unauthorized", message = "Missing or malformed device key." }, statusCode: 401);
+        var device = await devices.FindByIdAsync(deviceId, ct);
+        if (device is null || device.Revoked || !DeviceAuth.SecretMatches(secret, device.KeyHash))
+            return Results.Json(new { code = "device.unauthorized", message = "Unknown, revoked, or invalid device key." }, statusCode: 401);
+        var problem = ValidateHeartbeat(body);
+        if (problem is not null)
+            return ErrorMapper.ToResult(new Error("validation.failed", problem));
+        await devices.RecordHeartbeatAsync(
+            device.TenantId, device.DeviceId,
+            body.SoftwareVersion, body.ModelVersion, body.ConfigVersion, ct);
+        var active = await config.GetLatestBundleAsync(device.TenantId, ct);
+        int? serverVersion = active?.Version;
+        return Results.Json(new
+        {
+            serverConfigVersion = serverVersion,
+            configStale = serverVersion.HasValue && body.ConfigVersion < serverVersion.Value,
+            serverTimeUtc = DateTimeOffset.UtcNow,
+        });
+    }
+
+    private static string? ValidateHeartbeat(HeartbeatRequest body)
+    {
+        if (string.IsNullOrWhiteSpace(body.SoftwareVersion))
+            return "SoftwareVersion is required.";
+        if (string.IsNullOrWhiteSpace(body.ModelVersion))
+            return "ModelVersion is required.";
+        if (body.ConfigVersion < 0)
+            return "ConfigVersion must be >= 0.";
+        if (body.QueueDepth < 0)
+            return "QueueDepth must be >= 0.";
+        if (double.IsNaN(body.FrameAgeSeconds) || double.IsInfinity(body.FrameAgeSeconds) || body.FrameAgeSeconds < 0)
+            return "FrameAgeSeconds must be a finite value >= 0.";
+        if (body.DiskUsedBytes < 0)
+            return "DiskUsedBytes must be >= 0.";
+        return null;
     }
 
     private sealed record TenantResolution(bool IsSuccess, string? TenantId, string? Actor, IResult? Failure);

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using EduSphere.Safety.Api;
+using EduSphere.Safety.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
@@ -591,5 +592,133 @@ public sealed class Plan3EvidenceApiTests : IClassFixture<SafetyApiFactory>
         var response = await DeviceClient($"{deviceId}.{secret}")
             .PostAsJsonAsync("/v1/evidence/manifest/complete", new { edgeEventId = "evt-nope", kind = "clip" });
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+}
+
+public sealed class Plan3HeartbeatApiTests : IClassFixture<SafetyApiFactory>
+{
+    private const string ValidBundle = """{"format":"edusphere-rule-bundle/1","bundleVersion":1,"modelVersion":"m","schedules":[{"scheduleId":"night","ianaTimezone":"UTC","closedWindows":[]}],"rules":[{"ruleId":"zone-a","type":"ZoneIntrusion","version":1,"confidenceThreshold":0.5,"persistenceFrames":3,"cooldownSeconds":60,"polygon":[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]],"scheduleId":"night"}]}""";
+
+    private readonly SafetyApiFactory _factory;
+
+    public Plan3HeartbeatApiTests(SafetyApiFactory factory)
+    {
+        _factory = factory;
+        factory.Stores.Reset();
+        factory.Stores.Devices.Members.Add(("t1", "staff-1"));
+    }
+
+    private HttpClient UserClient(string tenantId = "t1", string userId = "staff-1")
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", SafetyApiFactory.UserToken(tenantId, userId));
+        return client;
+    }
+
+    private HttpClient DeviceClient(string deviceHeader)
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add(DeviceAuth.HeaderName, deviceHeader);
+        return client;
+    }
+
+    private async Task<(string DeviceId, string Secret)> EnrolDeviceAsync(HttpClient staff)
+    {
+        var codeResponse = await staff.PostAsJsonAsync("/v1/devices/enrol-codes", new { campusId = "campus-a" });
+        Assert.Equal(HttpStatusCode.OK, codeResponse.StatusCode);
+        var code = (await codeResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()!;
+
+        var enrolResponse = await _factory.CreateClient().PostAsJsonAsync("/v1/devices/enrol", new { code });
+        Assert.Equal(HttpStatusCode.OK, enrolResponse.StatusCode);
+        var enrolDoc = await enrolResponse.Content.ReadFromJsonAsync<JsonElement>();
+        return (enrolDoc.GetProperty("deviceId").GetString()!, enrolDoc.GetProperty("secret").GetString()!);
+    }
+
+    private static object HeartbeatBody(int configVersion = 3) => new
+    {
+        softwareVersion = "edge-agent/1.2.3",
+        modelVersion = "sim-detector/1",
+        configVersion,
+        queueDepth = 4,
+        frameAgeSeconds = 0.4,
+        diskUsedBytes = 123456789L,
+    };
+
+    private async Task PublishBundleAsync()
+    {
+        var publish = await UserClient().PostAsJsonAsync("/v1/config/bundles", new { document = ValidBundle });
+        Assert.Equal(HttpStatusCode.OK, publish.StatusCode);
+    }
+
+    private static JsonElement ItemById(JsonElement list, string deviceId) =>
+        list.GetProperty("items").EnumerateArray().First(i => i.GetProperty("id").GetString() == deviceId);
+
+    [Fact]
+    public async Task Heartbeat_UpdatesVersionsAndSeenAt()
+    {
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var beat = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/devices/heartbeat", HeartbeatBody());
+        Assert.Equal(HttpStatusCode.OK, beat.StatusCode);
+        var beatDoc = await beat.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(beatDoc.GetProperty("configStale").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, beatDoc.GetProperty("serverConfigVersion").ValueKind);
+
+        var list = await (await UserClient().GetAsync("/v1/devices")).Content.ReadFromJsonAsync<JsonElement>();
+        var item = ItemById(list, deviceId);
+        Assert.Equal("edge-agent/1.2.3", item.GetProperty("softwareVersion").GetString());
+        Assert.Equal("sim-detector/1", item.GetProperty("modelVersion").GetString());
+        Assert.Equal(3, item.GetProperty("configVersion").GetInt32());
+        Assert.True(DateTimeOffset.UtcNow - item.GetProperty("lastHeartbeatAt").GetDateTimeOffset() < TimeSpan.FromMinutes(1));
+        Assert.False(item.GetProperty("staleConfig").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Heartbeat_StaleWhenBehind()
+    {
+        await PublishBundleAsync();
+        await PublishBundleAsync();
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var beat = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/devices/heartbeat", HeartbeatBody(configVersion: 1));
+        Assert.Equal(HttpStatusCode.OK, beat.StatusCode);
+        var beatDoc = await beat.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(beatDoc.GetProperty("configStale").GetBoolean());
+        Assert.Equal(2, beatDoc.GetProperty("serverConfigVersion").GetInt32());
+
+        var list = await (await UserClient().GetAsync("/v1/devices")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(ItemById(list, deviceId).GetProperty("staleConfig").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Heartbeat_FutureConfigVersion_IsNotStale()
+    {
+        await PublishBundleAsync();
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var beat = await DeviceClient($"{deviceId}.{secret}")
+            .PostAsJsonAsync("/v1/devices/heartbeat", HeartbeatBody(configVersion: 99));
+        Assert.Equal(HttpStatusCode.OK, beat.StatusCode);
+        var beatDoc = await beat.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(beatDoc.GetProperty("configStale").GetBoolean());
+        Assert.Equal(1, beatDoc.GetProperty("serverConfigVersion").GetInt32());
+    }
+
+    [Fact]
+    public async Task Heartbeat_NonFiniteAge_Rejected()
+    {
+        var (deviceId, secret) = await EnrolDeviceAsync(UserClient());
+        var response = await DeviceClient($"{deviceId}.{secret}").PostAsJsonAsync("/v1/devices/heartbeat", new
+        {
+            softwareVersion = "edge-agent/1.2.3",
+            modelVersion = "sim-detector/1",
+            configVersion = 1,
+            queueDepth = 0,
+            frameAgeSeconds = -2.0,
+            diskUsedBytes = 0L,
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation.failed", doc.GetProperty("code").GetString());
     }
 }

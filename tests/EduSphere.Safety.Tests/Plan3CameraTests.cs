@@ -208,5 +208,10 @@ public sealed class Plan3CameraTests
 
         public Task<IReadOnlyList<DeviceRecord>> ListAsync(string tenantId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<DeviceRecord>>(Array.Empty<DeviceRecord>());
+
+        public Task RecordHeartbeatAsync(
+            string tenantId, string deviceId,
+            string softwareVersion, string modelVersion, int configVersion,
+            CancellationToken ct) => Task.CompletedTask;
     }
 }

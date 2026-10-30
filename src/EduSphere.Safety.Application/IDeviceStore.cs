@@ -1,6 +1,15 @@
 namespace EduSphere.Safety.Application;
 
-public sealed record DeviceRecord(string TenantId, string DeviceId, string KeyHash, bool Revoked, string? CampusId = null);
+public sealed record DeviceRecord(
+    string TenantId,
+    string DeviceId,
+    string KeyHash,
+    bool Revoked,
+    string? CampusId = null,
+    string SoftwareVersion = "",
+    string ModelVersion = "",
+    int ConfigVersion = 0,
+    DateTimeOffset? LastHeartbeatAt = null);
 
 /// <summary>
 /// Device + membership lookups backing Task 5 auth. Devices PK is
@@ -31,4 +40,13 @@ public interface IDeviceStore
     Task<bool> SetRevokedAsync(string tenantId, string deviceId, bool revoked, CancellationToken ct);
 
     Task<IReadOnlyList<DeviceRecord>> ListAsync(string tenantId, CancellationToken ct);
+
+    /// <summary>
+    /// Records a device heartbeat: single UPDATE of the 002 version columns
+    /// plus <c>last_heartbeat_at</c>.
+    /// </summary>
+    Task RecordHeartbeatAsync(
+        string tenantId, string deviceId,
+        string softwareVersion, string modelVersion, int configVersion,
+        CancellationToken ct);
 }

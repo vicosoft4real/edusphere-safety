@@ -246,6 +246,25 @@ public sealed class FakeApiDeviceStore : IDeviceStore
         Task.FromResult<IReadOnlyList<DeviceRecord>>(
             Devices.Values.Where(d => d.TenantId == tenantId).ToList());
 
+    public Task RecordHeartbeatAsync(
+        string tenantId, string deviceId,
+        string softwareVersion, string modelVersion, int configVersion,
+        CancellationToken ct)
+    {
+        if (Devices.TryGetValue(deviceId, out var d) && d.TenantId == tenantId)
+        {
+            Devices[deviceId] = d with
+            {
+                SoftwareVersion = softwareVersion,
+                ModelVersion = modelVersion,
+                ConfigVersion = configVersion,
+                LastHeartbeatAt = DateTimeOffset.UtcNow,
+            };
+        }
+
+        return Task.CompletedTask;
+    }
+
     public void Reset()
     {
         Devices.Clear();
