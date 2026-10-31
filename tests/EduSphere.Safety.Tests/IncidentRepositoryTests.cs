@@ -101,7 +101,8 @@ public sealed class IncidentRepositoryTests : IAsyncLifetime
     {
         var tenant = await CreateTenantAsync();
         var incident = Incident.Create(tenant, "campus-1", "ZoneIntrusion", "cam-1", $"edge-{Guid.NewGuid():N}");
-        await _store.AddAsync(incident, Outbox("incident.created", tenant), CancellationToken.None);
+        var payload = $"{{\"source\":\"test\",\"incidentId\":\"{incident.Id}\"}}";
+        await _store.AddAsync(incident, new OutboxEntry(tenant, "incident.created", payload), CancellationToken.None);
 
         var rows = await QueryOutboxAsync(tenant);
         var created = Assert.Single(rows);

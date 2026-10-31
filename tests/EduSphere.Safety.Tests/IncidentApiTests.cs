@@ -20,6 +20,11 @@ public class SafetyApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
+        var fileRoot = Path.Combine(Path.GetTempPath(), "edusphere-safety-tests", "evidence");
+        Directory.CreateDirectory(fileRoot);
+        builder.UseSetting("Storage:Backend", "File");
+        builder.UseSetting("Storage:FileRoot", fileRoot);
+        builder.UseSetting("Storage:TokenSecret", "test-only-storage-token-secret-32bytes!");
         builder.UseSetting("Auth:DevStubEnabled", "true");
         builder.UseSetting("Auth:IssuerSigningKey", SigningKey);
         // High ceiling so suites that enrol repeatedly never trip the throttle;
