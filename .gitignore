@@ -38,3 +38,7 @@ web/.next/
 web/out/
 
 web/*.tsbuildinfo
+
+# Model weights (large, licensed binaries): provenance in docs/weights.md,
+# downloaded per docs/edge-benchmark.md freeze procedure, never committed.
+models/*.onnx

@@ -115,6 +115,7 @@ if (!string.IsNullOrWhiteSpace(modelPath))
     var divisorRaw = Arg(args, "--pixel-divisor", string.Empty);
     var confidence = ArgDouble(args, "--confidence", 0.5);
     var threads = ArgInt(args, "--intra-op-threads", 1);
+    var inputSize = ArgInt(args, "--input-size", YoloxOutputParser.SupportedInputSize);
     if (string.IsNullOrWhiteSpace(modelSha) || !double.TryParse(
             divisorRaw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var divisor))
@@ -125,7 +126,7 @@ if (!string.IsNullOrWhiteSpace(modelPath))
 
     try
     {
-        detector = new OnnxPersonDetector(modelPath, modelSha, divisor, confidenceThreshold: confidence, intraOpThreads: threads);
+        detector = new OnnxPersonDetector(modelPath, modelSha, divisor, inputSize, confidenceThreshold: confidence, intraOpThreads: threads);
     }
     catch (Exception ex) when (ex is ArgumentException or InvalidDataException or IOException or UnauthorizedAccessException)
     {

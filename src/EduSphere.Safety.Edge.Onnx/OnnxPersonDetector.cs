@@ -81,9 +81,13 @@ public sealed class OnnxPersonDetector : IPersonDetector, IDisposable
             throw new ArgumentOutOfRangeException(nameof(pixelDivisor), "Pixel divisor must be a finite value greater than 0.");
         }
 
-        if (inputSize != YoloxOutputParser.SupportedInputSize)
+        // The parser decodes self-describing rows at any anchor count, so any
+        // stride-aligned square size is acceptable; the benchmark freeze
+        // re-verifies the exact export (reference: 640px). YOLOX downsamples by
+        // 32, so non-multiples of 32 would break the export's own grid math.
+        if (inputSize < 256 || inputSize > 1280 || inputSize % 32 != 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(inputSize), $"Only {YoloxOutputParser.SupportedInputSize}px input is supported by the YOLOX parser.");
+            throw new ArgumentOutOfRangeException(nameof(inputSize), "Input size must be a multiple of 32 in 256..1280.");
         }
 
         if (double.IsNaN(confidenceThreshold) || confidenceThreshold < 0.0 || confidenceThreshold > 1.0)
