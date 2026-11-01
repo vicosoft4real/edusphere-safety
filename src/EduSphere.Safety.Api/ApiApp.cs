@@ -63,6 +63,9 @@ public static class ApiApp
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                // Every endpoint reads raw JWT names ("tid", "sub", "campus"):
+                // keep them unmapped so lookups never depend on handler defaults.
+                options.MapInboundClaims = false;
                 if (!string.IsNullOrWhiteSpace(auth.Authority))
                 {
                     options.Authority = auth.Authority;
