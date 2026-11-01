@@ -1,5 +1,6 @@
 using System.Text.Json;
 using EduSphere.Safety.Edge;
+using EduSphere.Safety.Edge.Onnx;
 using EduSphere.Safety.EdgeAgent;
 
 // Thin host: wires IFrameSource -> IPersonDetector -> Tracker -> RuleEngine ->
@@ -36,7 +37,7 @@ static string Req(string[] args, string name)
     if (string.IsNullOrWhiteSpace(value))
     {
         Console.Error.WriteLine($"Missing required arg: {name}.");
-        Console.Error.WriteLine("Usage: edgeagent --source <url> --camera <id> --rules <bundle.json> --manifest <manifest.json> --out <dir> [options]");
+        Console.Error.WriteLine("Usage: edgeagent --source <url> --camera <id> --rules <bundle.json> [--manifest <manifest.json> | --model <model.onnx> --model-sha256 <hex> --pixel-divisor <f>] --out <dir> [options]");
         Environment.Exit(2);
     }
 
@@ -46,7 +47,8 @@ static string Req(string[] args, string name)
 var sourceUrl = Req(args, "--source");
 var cameraId = Req(args, "--camera");
 var rulesPath = Req(args, "--rules");
-var manifestPath = Req(args, "--manifest");
+var modelPath = Arg(args, "--model", string.Empty);
+var manifestPath = Arg(args, "--manifest", string.Empty);
 var outDir = Req(args, "--out");
 var width = ArgInt(args, "--width", 640);
 var height = ArgInt(args, "--height", 480);
@@ -103,17 +105,56 @@ catch (Exception ex) when (ex is InvalidDataException or IOException or Unauthor
     return 2;
 }
 
-ManifestReplayDetector detector;
-try
+IPersonDetector detector;
+if (!string.IsNullOrWhiteSpace(modelPath))
 {
-    detector = ManifestReplayDetector.LoadFromFile(manifestPath);
+    // Live detection: real pixels through the ONNX model. Weights checksum is
+    // mandatory (refuse-to-start on mismatch); pixelDivisor must match the
+    // frozen export's preprocessing (YOLOX-style raw pixels: 1.0).
+    var modelSha = Arg(args, "--model-sha256", string.Empty);
+    var divisorRaw = Arg(args, "--pixel-divisor", string.Empty);
+    var confidence = ArgDouble(args, "--confidence", 0.5);
+    var threads = ArgInt(args, "--intra-op-threads", 1);
+    if (string.IsNullOrWhiteSpace(modelSha) || !double.TryParse(
+            divisorRaw, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var divisor))
+    {
+        Console.Error.WriteLine("Refusing to start: --model requires --model-sha256 and --pixel-divisor.");
+        return 2;
+    }
+
+    try
+    {
+        detector = new OnnxPersonDetector(modelPath, modelSha, divisor, confidenceThreshold: confidence, intraOpThreads: threads);
+    }
+    catch (Exception ex) when (ex is ArgumentException or InvalidDataException or IOException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine($"Refusing to start: bad model ({ex.Message}).");
+        return 2;
+    }
 }
-catch (Exception ex) when (ex is InvalidDataException or JsonException or FormatException
-    or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
+else
 {
-    Console.Error.WriteLine($"Refusing to start: bad manifest ({ex.Message}).");
-    return 2;
+    if (string.IsNullOrWhiteSpace(manifestPath))
+    {
+        Console.Error.WriteLine("Refusing to start: need --manifest (replay) or --model (live detection).");
+        Console.Error.WriteLine("Usage: edgeagent --source <url> --camera <id> --rules <bundle.json> [--manifest <manifest.json> | --model <model.onnx> --model-sha256 <hex> --pixel-divisor <f>] --out <dir> [options]");
+        return 2;
+    }
+
+    try
+    {
+        detector = ManifestReplayDetector.LoadFromFile(manifestPath);
+    }
+    catch (Exception ex) when (ex is InvalidDataException or JsonException or FormatException
+        or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
+    {
+        Console.Error.WriteLine($"Refusing to start: bad manifest ({ex.Message}).");
+        return 2;
+    }
 }
+
+using var detectorLifetime = detector as IDisposable;
 var tracker = new Tracker(grace);
 var engine = new RuleEngine(bundle.Rules, new ScheduleEvaluator(), bundle.SchedulesById);
 

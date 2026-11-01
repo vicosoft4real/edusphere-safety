@@ -120,7 +120,7 @@ public sealed class OnnxPersonDetector : IPersonDetector, IDisposable
 
         var options = new SessionOptions
         {
-            GraphOptimizationLevel = GraphOptimizationLevel.All,
+            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
             IntraOpNumThreads = intraOpThreads,
             LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_WARNING,
         };
@@ -165,7 +165,7 @@ public sealed class OnnxPersonDetector : IPersonDetector, IDisposable
             }
         }
 
-        using var input = NamedOnnxValue.CreateFromTensor(_inputName, tensor);
+        var input = NamedOnnxValue.CreateFromTensor(_inputName, tensor);
         using var results = _session.Run(new[] { input });
         if (results.Count != 1)
         {

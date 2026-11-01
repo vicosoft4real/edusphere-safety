@@ -7,11 +7,12 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
-    <!-- Thin host: wiring only. Deployable packaging is Plan 4. Refs Edge only. -->
+    <!-- Thin host: wiring only. Deployable packaging is Plan 4. -->
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../EduSphere.Safety.Edge/EduSphere.Safety.Edge.csproj" />
+    <ProjectReference Include="../EduSphere.Safety.Edge.Onnx/EduSphere.Safety.Edge.Onnx.csproj" />
   </ItemGroup>
 
 </Project>
