@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Render the 180-second narrated demo from real recordings and original graphics.
 
-Requires Pillow, FFmpeg and FFprobe. No stock footage, invented metrics or mocked
-screens. Raw recordings and speech remain separate for a reproducible edit.
+Requires Pillow, FFmpeg and FFprobe. Uses actual app captures and attributed real
+pedestrian footage with measured SAM output. No invented metrics or mocked UI.
 """
 import html
+import os
 import json
 from pathlib import Path
 import re
@@ -64,64 +65,64 @@ def base(scene):
 
 def background(scene):
     im,d=base(scene);kind=scene['kind']
-    if kind in ('screen','simulation'):
+    if kind in ('screen','sam'):
         write(d,(64,177),scene['chapter'],21,LIME,width=420)
         write(d,(64,245),scene['title'],53,width=430,spacing=10)
         y=545 if scene['id']!=8 else 560
         for n,b in enumerate(scene['bullets'],1):
             d.ellipse((64,y+9,73,y+18),fill=LIME)
             y=write(d,(88,y),b,25,MUTED,width=360,spacing=6)+24
-        if kind=='simulation':
+        if kind=='sam':
             rect(d,(64,751,482,877))
-            write(d,(84,765),'ACTUAL EDGE RUN',19,LIME)
-            write(d,(84,802),'frames=60  events=1',22,INK,mono=True)
-            write(d,(84,838),'queued=1',20,MUTED,mono=True)
+            write(d,(84,765),'ACTUAL SAM + EDGE RUN',19,LIME)
+            write(d,(84,802),'frames=120  IDs=8',22,INK,mono=True)
+            write(d,(84,838),'zone events=6',20,MUTED,mono=True)
         d.rounded_rectangle((540,148,1836,904),18,fill='#d4dfd8',outline=LINE,width=2)
         for x,c in [(565,'#8a9c96'),(586,'#8a9c96'),(607,'#8a9c96')]:d.ellipse((x,165,x+10,175),fill=c)
-        write(d,(640,152),'LOCAL DEMO  /  '+(scene.get('clip','synthetic edge proof')).upper(),19,'#29443d')
+        write(d,(640,152),'ACTUAL CAPTURE  /  '+scene.get('clip','SAM 3.1 TRACKING').upper(),19,'#29443d')
         d.rectangle((548,190,1828,910),fill='#f5f5f4')
     elif kind=='hook':
         write(d,(64,183),scene['chapter'],23,LIME)
         write(d,(64,273),scene['title'],97,width=1000,spacing=10)
         write(d,(70,548),'Camera events, human review,\nand an accountable response.',34,MUTED,spacing=14)
-        pill(d,70,713,'BUILT WITH META LLAMA')
-        for i,(label,sub) in enumerate([('01  DETECT','A scheduled zone rule fires'),('02  UNDERSTAND','Evidence + local Llama briefing'),('03  RESPOND','Acknowledge → investigate → resolve')]):
+        pill(d,70,713,'META SAM 3.1 + LLAMA')
+        for i,(label,sub) in enumerate([('01  TRACK','Real footage + SAM object IDs'),('02  UNDERSTAND','Evidence + local Llama briefing'),('03  RESPOND','Acknowledge → investigate → resolve')]):
             y=248+i*185;rect(d,(1110,y,1828,y+153))
             write(d,(1142,y+23),label,29,LIME)
             write(d,(1142,y+78),sub,27,INK,width=650)
     elif kind=='architecture':
         write(d,(64,171),scene['chapter'],23,LIME)
         write(d,(64,221),scene['title'].replace('\n',' '),65)
-        cards=[(64,520,'SCHOOL-SIDE EDGE','FFmpeg decode\nPerson tracks\nScheduled rules\nPersistent outbox'),
-               (704,1210,'CLOUD SERVICES','.NET 10 API\nPostgreSQL incidents\nEvidence + audit log\nNotification worker'),
+        cards=[(64,520,'VIDEO + META SAM 3.1','Real recorded clip\nHosted tracking API\nModel object IDs\nBoxes + encoded masks'),
+               (704,1210,'EDGE + INCIDENT API','Source hash + FPS check\nScheduled zone rules\nPersistent event outbox\nPostgreSQL + evidence'),
                (1392,1856,'STAFF CONSOLE','Next.js dashboard\nEvidence review\nLlama briefing\nRecorded staff actions')]
         for x1,x2,title,body in cards:
             rect(d,(x1,370,x2,695));write(d,(x1+28,394),title,23,LIME)
             write(d,(x1+28,460),body,29,spacing=15)
-        for x1,x2,label in [(534,692,'demo handoff'),(1224,1380,'authorized API')]:
+        for x1,x2,label in [(534,692,'model tracks'),(1224,1380,'demo handoff')]:
             d.line((x1,527,x2-14,527),fill=LIME,width=3)
             d.polygon([(x2-14,519),(x2-14,535),(x2-3,527)],fill=LIME)
             write(d,(x1-4,557),label,18,MUTED,width=x2-x1)
         rect(d,(704,734,1856,858))
         write(d,(738,751),'META LLAMA 3.2 / LOCAL OLLAMA',25,LIME)
         write(d,(738,799),'Authorized metadata → structured briefing → staff review',27)
-        write(d,(64,747),'REPLAY USED IN DEMO',22,LIME)
-        write(d,(64,790),'YOLOX / ONNX adapter exists.\nAccuracy benchmarks remain pending.',23,MUTED,width=570)
+        write(d,(64,747),'REAL RECORDED CLIP',22,LIME)
+        write(d,(64,790),'SAM receives the clip.\nLlama receives metadata only.',23,MUTED,width=570)
     elif kind=='validation':
         write(d,(64,171),scene['chapter'],23,LIME)
         write(d,(64,226),scene['title'].replace('\n',' '),65)
-        write(d,(68,335),'509',190,LIME,spacing=0)
-        write(d,(78,575),'EXISTING AUTOMATED TESTS PASSED',27)
+        write(d,(68,335),'518',190,LIME,spacing=0)
+        write(d,(78,575),'.NET TESTS + 6 PYTHON TESTS PASSED',27)
         write(d,(78,629),'0 failed · 0 skipped\nIncludes PostgreSQL integration tests',26,MUTED,spacing=18)
         rect(d,(895,354,1856,856))
         write(d,(931,384),'VERIFIED IN THE RUNNING APP',24,LIME)
-        write(d,(931,437),'Sign-in + tenant checks\nByte-identical evidence playback\nLocal Meta Llama inference\nIncident response workflow',30,spacing=17)
+        write(d,(931,437),'Real SAM 3.1 video tracking\nSource-bound rule evaluation\nEvidence + local Llama briefing\nRecorded staff response',30,spacing=17)
         d.line((931,654,1810,654),fill=LINE,width=2)
-        write(d,(931,680),'NEXT: field cameras, detector benchmarks,\nautomatic edge delivery, production SSO',26,MUTED,spacing=15)
+        write(d,(931,680),'NEXT: continuous cameras, field accuracy,\nautomatic delivery, production SSO',26,MUTED,spacing=15)
     elif kind=='close':
         write(d,(64,182),scene['chapter'],23,LIME)
         write(d,(64,286),scene['title'],99,width=1650,spacing=10)
-        write(d,(70,569),'Built with Meta Llama. Designed for school staff.',35,MUTED)
+        write(d,(70,569),'Built with Meta SAM 3.1 and Llama. Staff stay in control.',32,MUTED)
         pill(d,70,704,'OPEN SOURCE / MIT')
         write(d,(70,786),'github.com/vicosoft4real/edusphere-safety',29,LIME,mono=True)
     path=RENDER/f"scene-{scene['id']:02d}.png";im.save(path)
@@ -154,7 +155,15 @@ def render():
             t=end
         cmd=['ffmpeg','-y','-hide_banner','-loglevel','error','-loop','1','-framerate','30','-i',str(bg)]
         filters=[];current='0:v';input_count=1
-        if scene['kind']=='screen':
+        if scene['kind']=='screen' and scene.get('shots'):
+            parts=[]
+            for j,shot in enumerate(scene['shots']):
+                idx=input_count;cmd+=['-loop','1','-framerate','30','-t',str(shot['duration']),'-i',str(ASSETS/shot['file'])];input_count+=1
+                label=f'shot{j}'
+                filters += [f'[{idx}:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=0xf5f5f4,setsar=1,fps=30,format=yuv420p,trim=duration={shot["duration"]},setpts=PTS-STARTPTS[{label}]']
+                parts.append(f'[{label}]')
+            filters += [''.join(parts)+f'concat=n={len(parts)}:v=1:a=0[screen]','[0:v][screen]overlay=548:190:shortest=0[app]'];current='app'
+        elif scene['kind']=='screen':
             clip=clips[scene['clip']];cmd+=['-i',clip['file']];input_count+=1
             if scene['clip']=='llama':
                 # Show the actual click and actual generated result, omitting the
@@ -167,10 +176,10 @@ def render():
                 off=max(0,clip['offset']-0.15)
                 filters += [f'[1:v]trim=start={off},setpts=PTS-STARTPTS,scale=1280:720,fps=30,tpad=stop_mode=clone:stop_duration=5[screen]']
             filters += ['[0:v][screen]overlay=548:190:shortest=0[app]'];current='app'
-        elif scene['kind']=='simulation':
-            cmd+=['-i',str(ASSETS/'sim/sim.mp4')];input_count+=1
-            filters += [f'[1:v]setpts={duration/12}*(PTS-STARTPTS),scale=960:720,pad=1280:720:160:0:color=0x102c30,drawbox=x=496:y=0:w=288:h=720:color=0xc5f277@0.18:t=fill,drawbox=x=496:y=0:w=288:h=720:color=0xc5f277@0.8:t=3,fps=30[sim]',
-                '[0:v][sim]overlay=548:190:shortest=0[app]'];current='app'
+        elif scene['kind']=='sam':
+            cmd+=['-i',str(ROOT/'.demo-runtime/real-footage/sam-api/sam-tracking-preview.mp4')];input_count+=1
+            filters += [f'[1:v]setpts=PTS-STARTPTS,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=0x102c30,fps=30,tpad=stop_mode=clone:stop_duration={duration-12}[sam]',
+                '[0:v][sam]overlay=548:190:shortest=0[app]'];current='app'
         for n,(cp,start,end) in enumerate(caption_inputs):
             idx=input_count;cmd+=['-loop','1','-framerate','30','-i',str(cp)];input_count+=1
             out=f'caption{n}'
@@ -181,18 +190,21 @@ def render():
         cmd+=['-filter_complex_threads','1','-filter_complex',';'.join(filters),'-map',f'[{current}]','-map','[audio]',
             '-t',str(duration),'-r','30','-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p',
             '-threads','4','-c:a','aac','-b:a','160k','-ar','48000','-ac','2',str(output)]
-        print(f"Rendering scene {ident:02d}/{len(SCENES)}: {duration}s, voice speed {speed:.2f}x",flush=True)
-        subprocess.run(cmd,check=True)
+        selected={int(value) for value in os.environ.get('RENDER_ONLY','').split(',') if value.strip()}
+        if not selected or ident in selected or not output.exists():
+            print(f"Rendering scene {ident:02d}/{len(SCENES)}: {duration}s, voice speed {speed:.2f}x",flush=True)
+            subprocess.run(cmd,check=True)
+        else:print(f'Reusing completed scene {ident:02d}',flush=True)
         global_time+=duration
         script.append(f"### {stamp(global_time-duration)[:8]}–{stamp(global_time)[:8]} · {scene['chapter']}\n\n{scene['narration']}\n")
     (SUB/'edusphere-safety-demo.srt').write_text('\n'.join(subtitles))
-    (SUB/'NARRATION.md').write_text('# EduSphere Safety · three-minute narration\n\nSynthetic English narration. All app footage is recorded from the running project.\n\n'+'\n'.join(script))
+    (SUB/'NARRATION.md').write_text('# EduSphere Safety · three-minute SAM demo narration\n\nSynthetic English narration. Actual app captures and attributed OpenCV real footage with verified SAM API tracks. The 12-second tracking clip plays at normal speed, followed by a held frame. Local Llama inference wait is omitted between actual before/after captures.\n\n'+'\n'.join(script))
     concat=RENDER/'concat.txt';concat.write_text('\n'.join(f"file '{RENDER/f'{s['id']:02d}.mp4'}'" for s in SCENES))
-    final=SUB/'edusphere-safety-demo-3min.mp4'
+    final=SUB/'edusphere-safety-sam31-demo-3min.mp4'
     subprocess.run(['ffmpeg','-y','-hide_banner','-loglevel','error','-f','concat','-safe','0','-i',str(concat),
         '-i',str(SUB/'edusphere-safety-demo.srt'),'-map','0:v','-map','0:a','-map','1:0','-c:v','copy','-c:a','copy',
         '-c:s','mov_text','-metadata:s:s:0','language=eng','-metadata','title=EduSphere Safety — Meta Global AI Developer Hackathon',
-        '-metadata','comment=Real app recordings; synthetic pipeline footage; local Meta Llama briefing; inference wait shortened.',
+        '-metadata','comment=Real SAM 3.1 API tracking on OpenCV public pedestrian sample; actual app captures; explicit event handoff; local Llama inference wait shortened.',
         '-t','179.8','-movflags','+faststart',str(final)],check=True)
     subprocess.run(['ffmpeg','-y','-loglevel','error','-ss','3','-i',str(final),'-frames:v','1',str(SUB/'demo-poster.jpg')],check=True)
     print('Final duration:',probe(final),'seconds',flush=True)

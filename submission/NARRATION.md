@@ -1,51 +1,51 @@
-# EduSphere Safety · three-minute narration
+# EduSphere Safety · three-minute SAM demo narration
 
-Synthetic English narration. All app footage is recorded from the running project.
+Synthetic English narration. Actual app captures and attributed OpenCV real footage with verified SAM API tracks. The 12-second tracking clip plays at normal speed, followed by a held frame. Local Llama inference wait is omitted between actual before/after captures.
 
-### 00:00:00–00:00:12 · THE PROBLEM
+### 00:00:00–00:00:10 · THE PROBLEM
 
-A camera can record an incident without getting help to the right person. EduSphere Safety connects school camera events to a staff response, with evidence and a clear record of who acted.
+A camera can record an event without getting help to the right person. EduSphere Safety connects real video tracking to evidence, staff review, and a recorded response.
 
-### 00:00:12–00:00:24 · HOW IT WORKS
+### 00:00:10–00:00:24 · HOW IT WORKS
 
-The edge agent decodes video, tracks people, and applies scheduled rules. A cloud API stores incidents. The staff console combines evidence review, local Meta Llama briefings, and a recorded response workflow.
+Meta SAM three point one tracks people in a recorded clip. The edge agent checks the source and applies zone rules. Our API stores incidents and evidence. Local Meta Llama drafts a briefing, while staff control the response.
 
 ### 00:00:24–00:00:38 · 01 / THE RUNNING APP
 
-This is the running application with a real PostgreSQL database. We sign in as the school safety officer. The overview shows enrolled devices and open incidents, while diagnostics identifies camera coverage gaps.
+This is the running Next.js console backed by our dot net API and PostgreSQL. We sign in as the school safety officer. The overview shows devices, monitoring coverage, and incidents for this school.
 
-### 00:00:38–00:00:54 · 02 / DEFINE THE RULE
+### 00:00:38–00:00:50 · 02 / DEFINE THE RULE
 
-A school defines a restricted zone and an after-hours schedule. This editor stores the polygon, confidence threshold, persistence, and cooldown in a versioned bundle. Persistence requires multiple frames, so one isolated detection does not trigger this rule.
+The school configures a zone, schedule, confidence threshold, and persistence. This versioned bundle names SAM three point one. Multiple frames must support the configured rule before it produces an event.
 
-### 00:00:54–00:01:12 · 03 / RUN THE EDGE PIPELINE
+### 00:00:50–00:01:12 · 03 / META SAM 3.1 ON REAL VIDEO
 
-This reproducible demo uses synthetic footage and replayed detections. The real FFmpeg decoder, tracker, and rule engine process sixty frames and write one zone event to the persistent outbox. This verifies pipeline behavior, not detector accuracy.
+Here, Meta SAM three point one tracks real people in a twelve-second public OpenCV recording. These boxes and IDs came from an actual API call. All one hundred and twenty frames returned tracks, with eight IDs across the clip. Our edge agent checks the source and evaluates the tracks, producing six events for this demonstration zone.
 
 ### 00:01:12–00:01:26 · 04 / CREATE AN INCIDENT
 
-A demo handoff sends the edge outbox event to the real API. Retrying the same event returns the same incident identifier. Staff open that single incident from the inbox.
+We select one actual SAM zone event. An explicit demo handoff sends it to the API and retries it. Both requests return one incident. The record retains model version SAM three point one.
 
 ### 00:01:26–00:01:44 · 05 / REVIEW THE EVIDENCE
 
-We upload the synthetic clip through the evidence API and open it from the incident. Playback is authorized through a short-lived link, and access is logged. This supplied test clip gives staff context; automatic live-camera clip extraction remains future work.
+This is the same real clip, uploaded with the event through the evidence API. Playback uses an authorized, short-lived link, and access is logged. The recording gives staff context. Automatic live-camera clip extraction remains future work.
 
-### 00:01:44–00:02:06 · 06 / META LLAMA IN THE WORKFLOW
+### 00:01:44–00:02:04 · 06 / META LLAMA IN THE WORKFLOW
 
-Now we ask Meta Llama to draft an incident briefing. It runs locally and receives only authorized event metadata, never camera footage. The structured result gives staff a summary, review steps, and explicit unknowns. It cannot change the incident or take action. Staff verify the draft against the evidence.
+Meta Llama drafts an incident briefing locally. It receives only authorized event metadata, with no video. The structured result gives staff a summary, review steps, and explicit unknowns. It cannot change the incident or take action. Staff verify the draft against the evidence.
 
-### 00:02:06–00:02:24 · 07 / CLOSE THE LOOP
+### 00:02:04–00:02:22 · 07 / CLOSE THE LOOP
 
-The officer acknowledges the incident, adds an investigation note, and resolves it. Each transition checks the current version to prevent conflicting updates. The database records the actor and activity. Acknowledgement also cancels pending escalation, connecting the alert to an accountable staff response.
+The officer acknowledges the incident, adds an investigation note, and resolves it. Each transition checks the current version to prevent conflicting updates. The database records the actor and activity. Acknowledgement cancels pending escalation, connecting this real video event to an accountable response.
 
-### 00:02:24–00:02:38 · 08 / OPERATE RESPONSIBLY
+### 00:02:22–00:02:38 · 08 / OPERATE RESPONSIBLY
 
-Notification policy sets escalation recipients and delays. The worker writes email to a local pickup directory in this demo. Diagnostics shows evidence access and untested cameras, making monitoring gaps visible.
+In production, a configured pool-zone event could route an urgent alert to a supervisor by phone, SMS, or a site alarm. This demo verifies local email pickup, escalation settings, and the evidence access log.
 
 ### 00:02:38–00:02:52 · WHAT IS VERIFIED
 
-All five hundred and nine existing tests pass, including PostgreSQL integration tests. Next come real-camera validation, measured detector benchmarks, automatic edge delivery, and production sign-in integration.
+Five hundred and eighteen dot net tests and six Python tests pass. This validates a recorded-clip workflow. Field accuracy, continuous cameras, automatic delivery, and production sign-in remain next steps.
 
 ### 00:02:52–00:03:00 · EDUSPHERE SAFETY
 
-EduSphere Safety makes the response part of the record. It assists school staff; it never replaces supervision.
+Built with Meta SAM and Llama, EduSphere Safety records the response. Staff remain in control.

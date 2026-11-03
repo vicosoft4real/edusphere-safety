@@ -1,143 +1,159 @@
 1
-00:00:00,250 --> 00:00:04,862
-A camera can record an incident without getting help to the right person.
+00:00:00,250 --> 00:00:04,800
+A camera can record an event without getting help to the right person.
 
 2
-00:00:04,862 --> 00:00:11,602
-EduSphere Safety connects school camera events to a staff response, with evidence and a clear record of who acted.
+00:00:04,800 --> 00:00:09,700
+EduSphere Safety connects real video tracking to evidence, staff review, and a recorded response.
 
 3
-00:00:12,250 --> 00:00:16,313
-The edge agent decodes video, tracks people, and applies scheduled rules.
+00:00:10,250 --> 00:00:14,143
+Meta SAM three point one tracks people in a recorded clip.
 
 4
-00:00:16,313 --> 00:00:18,160
-A cloud API stores incidents.
+00:00:14,143 --> 00:00:17,683
+The edge agent checks the source and applies zone rules.
 
 5
-00:00:18,160 --> 00:00:23,700
-The staff console combines evidence review, local Meta Llama briefings, and a recorded response workflow.
+00:00:17,683 --> 00:00:19,807
+Our API stores incidents and evidence.
 
 6
-00:00:24,250 --> 00:00:28,453
-This is the running application with a real PostgreSQL database.
+00:00:19,807 --> 00:00:23,700
+Local Meta Llama drafts a briefing, while staff control the response.
 
 7
-00:00:28,453 --> 00:00:31,816
-We sign in as the school safety officer.
+00:00:24,250 --> 00:00:29,956
+This is the running Next.js console backed by our dot net API and PostgreSQL.
 
 8
-00:00:31,816 --> 00:00:37,700
-The overview shows enrolled devices and open incidents, while diagnostics identifies camera coverage gaps.
+00:00:29,956 --> 00:00:33,217
+We sign in as the school safety officer.
 
 9
-00:00:38,250 --> 00:00:42,426
-A school defines a restricted zone and an after-hours schedule.
+00:00:33,217 --> 00:00:37,700
+The overview shows devices, monitoring coverage, and incidents for this school.
 
 10
-00:00:42,426 --> 00:00:48,272
-This editor stores the polygon, confidence threshold, persistence, and cooldown in a versioned bundle.
+00:00:38,250 --> 00:00:42,067
+The school configures a zone, schedule, confidence threshold, and persistence.
 
 11
-00:00:48,272 --> 00:00:53,700
-Persistence requires multiple frames, so one isolated detection does not trigger this rule.
+00:00:42,067 --> 00:00:45,120
+This versioned bundle names SAM three point one.
 
 12
-00:00:54,250 --> 00:00:58,486
-This reproducible demo uses synthetic footage and replayed detections.
+00:00:45,120 --> 00:00:49,700
+Multiple frames must support the configured rule before it produces an event.
 
 13
-00:00:58,486 --> 00:01:07,899
-The real FFmpeg decoder, tracker, and rule engine process sixty frames and write one zone event to the persistent outbox.
+00:00:50,250 --> 00:00:55,996
+Here, Meta SAM three point one tracks real people in a twelve-second public OpenCV recording.
 
 14
-00:01:07,899 --> 00:01:11,194
-This verifies pipeline behavior, not detector accuracy.
+00:00:55,996 --> 00:00:59,826
+These boxes and IDs came from an actual API call.
 
 15
-00:01:12,250 --> 00:01:17,166
-A demo handoff sends the edge outbox event to the real API.
+00:00:59,826 --> 00:01:05,188
+All one hundred and twenty frames returned tracks, with eight IDs across the clip.
 
 16
-00:01:17,166 --> 00:01:20,853
-Retrying the same event returns the same incident identifier.
+00:01:05,188 --> 00:01:11,700
+Our edge agent checks the source and evaluates the tracks, producing six events for this demonstration zone.
 
 17
-00:01:20,853 --> 00:01:24,130
-Staff open that single incident from the inbox.
+00:01:12,250 --> 00:01:15,103
+We select one actual SAM zone event.
 
 18
-00:01:26,250 --> 00:01:32,325
-We upload the synthetic clip through the evidence API and open it from the incident.
+00:01:15,103 --> 00:01:19,994
+An explicit demo handoff sends it to the API and retries it.
 
 19
-00:01:32,325 --> 00:01:36,780
-Playback is authorized through a short-lived link, and access is logged.
+00:01:19,994 --> 00:01:22,032
+Both requests return one incident.
 
 20
-00:01:36,780 --> 00:01:42,450
-This supplied test clip gives staff context; automatic live-camera clip extraction remains future work.
+00:01:22,032 --> 00:01:25,700
+The record retains model version SAM three point one.
 
 21
-00:01:44,250 --> 00:01:48,506
-Now we ask Meta Llama to draft an incident briefing.
+00:01:26,250 --> 00:01:32,643
+This is the same real clip, uploaded with the event through the evidence API.
 
 22
-00:01:48,506 --> 00:01:53,614
-It runs locally and receives only authorized event metadata, never camera footage.
+00:01:32,643 --> 00:01:37,210
+Playback uses an authorized, short-lived link, and access is logged.
 
 23
-00:01:53,614 --> 00:01:58,722
-The structured result gives staff a summary, review steps, and explicit unknowns.
+00:01:37,210 --> 00:01:39,493
+The recording gives staff context.
 
 24
-00:01:58,722 --> 00:02:02,127
-It cannot change the incident or take action.
+00:01:39,493 --> 00:01:42,690
+Automatic live-camera clip extraction remains future work.
 
 25
-00:02:02,127 --> 00:02:05,106
-Staff verify the draft against the evidence.
+00:01:44,250 --> 00:01:47,372
+Meta Llama drafts an incident briefing locally.
 
 26
-00:02:06,250 --> 00:02:11,236
-The officer acknowledges the incident, adds an investigation note, and resolves it.
+00:01:47,372 --> 00:01:51,385
+It receives only authorized event metadata, with no video.
 
 27
-00:02:11,236 --> 00:02:15,390
-Each transition checks the current version to prevent conflicting updates.
+00:01:51,385 --> 00:01:56,737
+The structured result gives staff a summary, review steps, and explicit unknowns.
 
 28
-00:02:15,390 --> 00:02:18,299
-The database records the actor and activity.
+00:01:56,737 --> 00:02:00,304
+It cannot change the incident or take action.
 
 29
-00:02:18,299 --> 00:02:23,700
-Acknowledgement also cancels pending escalation, connecting the alert to an accountable staff response.
+00:02:00,304 --> 00:02:03,426
+Staff verify the draft against the evidence.
 
 30
-00:02:24,250 --> 00:02:27,388
-Notification policy sets escalation recipients and delays.
+00:02:04,250 --> 00:02:09,236
+The officer acknowledges the incident, adds an investigation note, and resolves it.
 
 31
-00:02:27,388 --> 00:02:32,768
-The worker writes email to a local pickup directory in this demo.
+00:02:09,236 --> 00:02:13,390
+Each transition checks the current version to prevent conflicting updates.
 
 32
-00:02:32,768 --> 00:02:37,700
-Diagnostics shows evidence access and untested cameras, making monitoring gaps visible.
+00:02:13,390 --> 00:02:16,299
+The database records the actor and activity.
 
 33
-00:02:38,250 --> 00:02:44,458
-All five hundred and nine existing tests pass, including PostgreSQL integration tests.
+00:02:16,299 --> 00:02:21,700
+Acknowledgement cancels pending escalation, connecting this real video event to an accountable response.
 
 34
-00:02:44,458 --> 00:02:51,700
-Next come real-camera validation, measured detector benchmarks, automatic edge delivery, and production sign-in integration.
+00:02:22,250 --> 00:02:30,877
+In production, a configured pool-zone event could route an urgent alert to a supervisor by phone, SMS, or a site alarm.
 
 35
-00:02:52,250 --> 00:02:56,194
-EduSphere Safety makes the response part of the record.
+00:02:30,877 --> 00:02:36,218
+This demo verifies local email pickup, escalation settings, and the evidence access log.
 
 36
-00:02:56,194 --> 00:02:59,700
-It assists school staff; it never replaces supervision.
+00:02:38,250 --> 00:02:43,816
+Five hundred and eighteen dot net tests and six Python tests pass.
+
+37
+00:02:43,816 --> 00:02:46,134
+This validates a recorded-clip workflow.
+
+38
+00:02:46,134 --> 00:02:51,700
+Field accuracy, continuous cameras, automatic delivery, and production sign-in remain next steps.
+
+39
+00:02:52,250 --> 00:02:57,713
+Built with Meta SAM and Llama, EduSphere Safety records the response.
+
+40
+00:02:57,713 --> 00:02:59,700
+Staff remain in control.

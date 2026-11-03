@@ -1,30 +1,32 @@
 {
-  "programs": [],
-  "stream_groups": [],
+  "file": "edusphere-safety-sam31-demo-3min.mp4",
+  "durationSeconds": 179.887696,
+  "bytes": 7300085,
+  "sha256": "37da2ed0b4930552095213176422e5617cb9da7a475283ee243527bfa786a279",
   "streams": [
     {
-      "codec_name": "h264",
-      "codec_type": "video",
+      "type": "video",
+      "codec": "h264",
       "width": 1920,
-      "height": 1080,
-      "r_frame_rate": "30/1",
-      "duration": "179.866667"
+      "height": 1080
     },
     {
-      "codec_name": "aac",
-      "codec_type": "audio",
-      "r_frame_rate": "0/0",
-      "duration": "179.802667"
+      "type": "audio",
+      "codec": "aac",
+      "width": null,
+      "height": null
     },
     {
-      "codec_name": "mov_text",
-      "codec_type": "subtitle",
-      "r_frame_rate": "0/0",
-      "duration": "179.700000"
+      "type": "subtitle",
+      "codec": "mov_text",
+      "width": null,
+      "height": null
     }
   ],
-  "format": {
-    "duration": "179.887696",
-    "size": "6921249"
-  }
+  "decodeCheck": "passed",
+  "source": "actual app captures + attributed OpenCV real footage + actual SAM 3.1 API tracks",
+  "modelApiCallsForThisEdit": 0,
+  "youtubeUrl": "https://www.youtube.com/watch?v=lX3EbPyyavw",
+  "visibility": "Unlisted",
+  "submissionUpdateVerified": true
 }

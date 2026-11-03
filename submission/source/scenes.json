@@ -1,21 +1,21 @@
 [
   {
     "id": 1,
-    "duration": 12,
+    "duration": 10,
     "kind": "hook",
     "chapter": "THE PROBLEM",
     "title": "From footage\nto follow-through.",
     "tag": "Meta Global AI Developer Hackathon \u00b7 built Oct 29\u2013Nov 3, 2026",
-    "narration": "A camera can record an incident without getting help to the right person. EduSphere Safety connects school camera events to a staff response, with evidence and a clear record of who acted."
+    "narration": "A camera can record an event without getting help to the right person. EduSphere Safety connects real video tracking to evidence, staff review, and a recorded response."
   },
   {
     "id": 2,
-    "duration": 12,
+    "duration": 14,
     "kind": "architecture",
     "chapter": "HOW IT WORKS",
-    "title": "Detect locally.\nRespond together.",
-    "tag": "Edge agent \u2192 API \u2192 staff",
-    "narration": "The edge agent decodes video, tracks people, and applies scheduled rules. A cloud API stores incidents. The staff console combines evidence review, local Meta Llama briefings, and a recorded response workflow."
+    "title": "Track real footage.\nMake action accountable.",
+    "tag": "Hosted SAM 3.1 tracking \u2192 source-bound edge rules \u2192 staff response",
+    "narration": "Meta SAM three point one tracks people in a recorded clip. The edge agent checks the source and applies zone rules. Our API stores incidents and evidence. Local Meta Llama drafts a briefing, while staff control the response."
   },
   {
     "id": 3,
@@ -30,36 +30,52 @@
       "Local development sign-in"
     ],
     "tag": "Recorded from the running application",
-    "narration": "This is the running application with a real PostgreSQL database. We sign in as the school safety officer. The overview shows enrolled devices and open incidents, while diagnostics identifies camera coverage gaps."
+    "narration": "This is the running Next.js console backed by our dot net API and PostgreSQL. We sign in as the school safety officer. The overview shows devices, monitoring coverage, and incidents for this school.",
+    "shots": [
+      {
+        "file": "sam-overview.jpg",
+        "duration": 14
+      }
+    ]
   },
   {
     "id": 4,
-    "duration": 16,
+    "duration": 12,
     "kind": "screen",
     "clip": "rules",
     "chapter": "02 / DEFINE THE RULE",
     "title": "A zone. A schedule.\nA repeatable rule.",
     "bullets": [
-      "Polygon + after-hours schedule",
-      "Persistence + cooldown",
-      "Versioned configuration"
+      "Demonstration zone + schedule",
+      "SAM 3.1 model version",
+      "Persistence + cooldown"
     ],
     "tag": "Recorded application \u00b7 rule configuration",
-    "narration": "A school defines a restricted zone and an after-hours schedule. This editor stores the polygon, confidence threshold, persistence, and cooldown in a versioned bundle. Persistence requires multiple frames, so one isolated detection does not trigger this rule."
+    "narration": "The school configures a zone, schedule, confidence threshold, and persistence. This versioned bundle names SAM three point one. Multiple frames must support the configured rule before it produces an event.",
+    "shots": [
+      {
+        "file": "sam-rules.jpg",
+        "duration": 6
+      },
+      {
+        "file": "sam-rules-published.jpg",
+        "duration": 6
+      }
+    ]
   },
   {
     "id": 5,
-    "duration": 18,
-    "kind": "simulation",
-    "chapter": "03 / RUN THE EDGE PIPELINE",
-    "title": "60 frames.\nOne zone event.",
+    "duration": 22,
+    "kind": "sam",
+    "chapter": "03 / META SAM 3.1 ON REAL VIDEO",
+    "title": "Real people.\nModel track IDs.",
     "bullets": [
-      "FFmpeg decode",
-      "Manifest replay \u2192 tracker \u2192 rules",
-      "One event persisted to the outbox"
+      "120 real frames \u00b7 8 SAM IDs",
+      "Source SHA-256 + FPS checked",
+      "6 demonstration-zone events"
     ],
-    "tag": "Synthetic footage \u00b7 replayed detections, not an accuracy benchmark",
-    "narration": "This reproducible demo uses synthetic footage and replayed detections. The real FFmpeg decoder, tracker, and rule engine process sixty frames and write one zone event to the persistent outbox. This verifies pipeline behavior, not detector accuracy."
+    "tag": "Real SAM 3.1 API output \u00b7 OpenCV public sample \u00b7 12-second recording, not local CCTV",
+    "narration": "Here, Meta SAM three point one tracks real people in a twelve-second public OpenCV recording. These boxes and IDs came from an actual API call. All one hundred and twenty frames returned tracks, with eight IDs across the clip. Our edge agent checks the source and evaluates the tracks, producing six events for this demonstration zone."
   },
   {
     "id": 6,
@@ -69,12 +85,22 @@
     "chapter": "04 / CREATE AN INCIDENT",
     "title": "One event.\nOne incident.",
     "bullets": [
-      "Device-authenticated ingestion",
-      "Duplicate event \u2192 same incident ID",
-      "Camera, campus and version retained"
+      "Actual SAM zone event selected",
+      "Duplicate retry \u2192 same incident",
+      "Model version sam-3.1 retained"
     ],
-    "tag": "Recorded application \u00b7 explicit demo handoff from edge outbox",
-    "narration": "A demo handoff sends the edge outbox event to the real API. Retrying the same event returns the same incident identifier. Staff open that single incident from the inbox."
+    "tag": "Recorded application \u00b7 explicit handoff of one real SAM event",
+    "narration": "We select one actual SAM zone event. An explicit demo handoff sends it to the API and retries it. Both requests return one incident. The record retains model version SAM three point one.",
+    "shots": [
+      {
+        "file": "sam-inbox.jpg",
+        "duration": 5
+      },
+      {
+        "file": "sam-incident.jpg",
+        "duration": 9
+      }
+    ]
   },
   {
     "id": 7,
@@ -84,16 +110,26 @@
     "chapter": "05 / REVIEW THE EVIDENCE",
     "title": "Context before\naction.",
     "bullets": [
-      "Synthetic clip uploaded via manifest API",
+      "Same real clip uploaded as evidence",
       "Short-lived playback link",
       "Evidence access is audit-logged"
     ],
-    "tag": "Recorded application \u00b7 supplied synthetic clip, not automatic clip extraction",
-    "narration": "We upload the synthetic clip through the evidence API and open it from the incident. Playback is authorized through a short-lived link, and access is logged. This supplied test clip gives staff context; automatic live-camera clip extraction remains future work."
+    "tag": "Recorded application \u00b7 supplied real sample clip \u00b7 automatic extraction remains future work",
+    "narration": "This is the same real clip, uploaded with the event through the evidence API. Playback uses an authorized, short-lived link, and access is logged. The recording gives staff context. Automatic live-camera clip extraction remains future work.",
+    "shots": [
+      {
+        "file": "sam-incident.jpg",
+        "duration": 6
+      },
+      {
+        "file": "sam-evidence.jpg",
+        "duration": 12
+      }
+    ]
   },
   {
     "id": 8,
-    "duration": 22,
+    "duration": 20,
     "kind": "screen",
     "clip": "llama",
     "chapter": "06 / META LLAMA IN THE WORKFLOW",
@@ -104,7 +140,17 @@
       "AI drafts; staff decide"
     ],
     "tag": "Real local Llama inference \u00b7 inference wait shortened in the edit",
-    "narration": "Now we ask Meta Llama to draft an incident briefing. It runs locally and receives only authorized event metadata, never camera footage. The structured result gives staff a summary, review steps, and explicit unknowns. It cannot change the incident or take action. Staff verify the draft against the evidence."
+    "narration": "Meta Llama drafts an incident briefing locally. It receives only authorized event metadata, with no video. The structured result gives staff a summary, review steps, and explicit unknowns. It cannot change the incident or take action. Staff verify the draft against the evidence.",
+    "shots": [
+      {
+        "file": "sam-llama-before.jpg",
+        "duration": 3
+      },
+      {
+        "file": "sam-llama-result.jpg",
+        "duration": 17
+      }
+    ]
   },
   {
     "id": 9,
@@ -119,22 +165,50 @@
       "Actor and note recorded in activity"
     ],
     "tag": "Recorded application \u00b7 persisted staff actions",
-    "narration": "The officer acknowledges the incident, adds an investigation note, and resolves it. Each transition checks the current version to prevent conflicting updates. The database records the actor and activity. Acknowledgement also cancels pending escalation, connecting the alert to an accountable staff response."
+    "narration": "The officer acknowledges the incident, adds an investigation note, and resolves it. Each transition checks the current version to prevent conflicting updates. The database records the actor and activity. Acknowledgement cancels pending escalation, connecting this real video event to an accountable response.",
+    "shots": [
+      {
+        "file": "sam-acknowledged.jpg",
+        "duration": 5
+      },
+      {
+        "file": "sam-investigating.jpg",
+        "duration": 6
+      },
+      {
+        "file": "sam-resolved.jpg",
+        "duration": 7
+      }
+    ]
   },
   {
     "id": 10,
-    "duration": 14,
+    "duration": 16,
     "kind": "screen",
     "clip": "operations",
     "chapter": "08 / OPERATE RESPONSIBLY",
-    "title": "Escalation with\nvisibility.",
+    "title": "Get the supervisor's\nattention.",
     "bullets": [
-      "Configurable escalation delay",
-      "Local email pickup verified",
-      "Camera health + evidence access log"
+      "Pool-zone events \u2192 urgent escalation",
+      "Phone / SMS / site alarms planned",
+      "Local email pickup verified today"
     ],
-    "tag": "Recorded application \u00b7 local email pickup, not external delivery",
-    "narration": "Notification policy sets escalation recipients and delays. The worker writes email to a local pickup directory in this demo. Diagnostics shows evidence access and untested cameras, making monitoring gaps visible."
+    "tag": "Production supervisor-alert integrations planned \u00b7 current demo verifies local email pickup",
+    "narration": "In production, a configured pool-zone event could route an urgent alert to a supervisor by phone, SMS, or a site alarm. This demo verifies local email pickup, escalation settings, and the evidence access log.",
+    "shots": [
+      {
+        "file": "sam-policy.jpg",
+        "duration": 6
+      },
+      {
+        "file": "sam-diagnostics.jpg",
+        "duration": 5
+      },
+      {
+        "file": "sam-diagnostics-access.jpg",
+        "duration": 5
+      }
+    ]
   },
   {
     "id": 11,
@@ -142,8 +216,8 @@
     "kind": "validation",
     "chapter": "WHAT IS VERIFIED",
     "title": "Working prototype.\nClear next steps.",
-    "tag": "509 existing tests passed \u00b7 0 failed \u00b7 0 skipped",
-    "narration": "All five hundred and nine existing tests pass, including PostgreSQL integration tests. Next come real-camera validation, measured detector benchmarks, automatic edge delivery, and production sign-in integration."
+    "tag": "518 .NET tests + 6 Python tests passed \u00b7 real SAM API and edge workflow verified",
+    "narration": "Five hundred and eighteen dot net tests and six Python tests pass. This validates a recorded-clip workflow. Field accuracy, continuous cameras, automatic delivery, and production sign-in remain next steps."
   },
   {
     "id": 12,
@@ -152,6 +226,6 @@
     "chapter": "EDUSPHERE SAFETY",
     "title": "Make the response\npart of the record.",
     "tag": "Assistive detection. Human decisions. Accountable response.",
-    "narration": "EduSphere Safety makes the response part of the record. It assists school staff; it never replaces supervision."
+    "narration": "Built with Meta SAM and Llama, EduSphere Safety records the response. Staff remain in control."
   }
 ]

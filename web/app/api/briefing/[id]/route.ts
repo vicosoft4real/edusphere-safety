@@ -70,7 +70,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
               "Suggest reviewing available evidence and following the school's established protocol. " +
               "Never decide an incident state, take actions, or imply a rule event proves a safety violation. " +
               "In the summary describe a rule event, not an actual intrusion. Never say unauthorized access, trespass, or confirmed violation. " +
-              "For example: 'A ZoneIntrusion rule event was recorded at the main-campus camera. The incident is New and awaits staff review.' " +
+              "For example: 'A configured rule event was recorded. Staff should review available evidence before deciding a response.' " +
+              "Only name a location when quoting its exact identifier from the supplied metadata. Never copy a location or state from an example. " +
               "Always say visual context and intent are unknown. This is assistive drafting for staff review.",
           },
           { role: "user", content: `Explain this recorded event for the reviewing officer. Metadata: ${JSON.stringify(facts)}` },

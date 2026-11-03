@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-03",
+  "sourceFilesChecked": 203,
+  "gitBlobsChecked": 323,
+  "configuredKeyMatchesInSource": 0,
+  "configuredKeyMatchesInHistory": 0,
+  "keyFileIgnored": true,
+  "keyFileMode": "0o600",
+  "apiKeyValuePrinted": false,
+  "gitleaksSourceFindings": 0,
+  "gitleaksHistoryFindings": 0,
+  "historyCommitsScanned": 27,
+  "scope": "Proposed public source files and all reachable local Git history; exact configured Meta key comparison without printing its value.",
+  "mediaReview": "Actual app/SAM capture contact sheets and final representative frames reviewed; no API-key settings or key files included."
+}

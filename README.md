@@ -10,41 +10,44 @@ Built for the **Meta Global AI Developer Hackathon 2026**, under **Build for You
 World**. This is a working prototype, with explicit simulation and deployment
 boundaries. It does not replace supervision or physical safety measures.
 
-- [Watch the three-minute demo on YouTube](https://www.youtube.com/watch?v=3fFxLrLHKA8)
-- [Download the MP4 and captions](https://github.com/vicosoft4real/edusphere-safety/releases/tag/hackathon-demo)
+- [Watch the three-minute demo on YouTube](https://www.youtube.com/watch?v=lX3EbPyyavw)
+- [Narration and captions](submission/NARRATION.md)
 - [Detailed judge's guide](submission/JUDGES_GUIDE.md)
 - [Submission answers](submission/SUBMISSION_ANSWERS.md)
 - [Architecture and original design](docs/superpowers/specs/2026-10-29-edusphere-safety-design.md)
 - [Operator configuration](docs/operator-notes.md)
 - [Real-footage verification and hosted SAM 3.1 adapter](docs/real-footage.md)
 
-[![EduSphere Safety demo](submission/demo-poster.jpg)](https://www.youtube.com/watch?v=3fFxLrLHKA8)
+[![EduSphere Safety demo](submission/demo-poster.jpg)](https://www.youtube.com/watch?v=lX3EbPyyavw)
 
 ## What runs
 
 ```text
 School camera / test footage
-  → FFmpeg → detector → tracker → scheduled rules → persistent edge outbox
+  → SAM 3.1 saved tracks / FFmpeg + detector + tracker → scheduled rules → edge outbox
   → explicit demo handoff → .NET API → PostgreSQL incidents + notification worker
   → Next.js staff console → evidence review → acknowledge → investigate → resolve
                           ↘ local Meta Llama 3.2 → briefing + checklist + unknowns
 ```
 
-The edge host supports a checksum-verified YOLOX ONNX person detector and a
-deterministic manifest-replay detector for testing. The submission demo uses
-synthetic footage and replayed detections, and labels that choice. It proves the
-decode/track/rules workflow; it does **not** measure real-camera detection accuracy.
+The updated demo uses **Meta SAM 3.1 API** on a real 12-second pedestrian
+recording from OpenCV. Its 120 frames produced 8 response-scoped object IDs;
+the edge agent preserved those IDs and generated 6 demonstration-zone events.
+Saved results are bound to the source SHA-256 and FPS. This is a public recorded
+sample, not a connected local CCTV feed or an accuracy benchmark. See
+[commands and limits](docs/real-footage.md), [measured results](submission/sam-validation.json)
+and [media attribution](submission/THIRD_PARTY_MEDIA.md).
 
-The additional recorded-clip path calls **Meta SAM 3.1 API** on actual video,
-preserves its object IDs, and evaluates source-bound results through the edge rule
-engine. A real 120-frame public pedestrian sample produced 8 SAM track IDs and
-6 demonstration-zone events. See [verification and commands](docs/real-footage.md)
-and [measured results](submission/sam-validation.json). This is sample verification,
-not a field accuracy or continuous-stream benchmark.
+The demo explicitly hands one generated event to the real API, verifies duplicate
+suppression, uploads a transcoded playback copy of the same recording and completes
+the staff workflow. Automatic edge delivery and live-camera clip extraction remain
+next steps. YOLOX ONNX and deterministic manifest replay remain alternative adapters.
 
-The current edge host writes an outbox. The demo harness explicitly sends those
-events to the API and uploads supplied synthetic evidence. Automatic edge delivery
-and live-camera clip extraction are not presented as finished.
+For production, critical configured zones such as a pool area could escalate to
+the responsible supervisor by phone, SMS or a site alarm, using the site's
+supervision schedule. Those integrations are planned; current notification
+verification uses local email pickup. No child-age, crawling or intent classifier
+is demonstrated, and the system does not replace supervision.
 
 ## Meta model integration
 
@@ -95,6 +98,18 @@ the supplied synthetic clip. The demo handoff hashes the edge host's slash-separ
 event ID into the cloud evidence API's 64-character identifier format. That mapping
 is explicit in the harness; automatic edge/cloud transport remains future work.
 
+For the updated SAM recording, follow [the real-footage setup](docs/real-footage.md)
+to obtain source-bound SAM results, then run:
+
+```sh
+python3 submission/source/prepare-sam-demo.py
+SAM_DEMO=1 python3 submission/source/verify-demo.py
+```
+
+The helper reuses saved results without another model call and prepares a fresh
+incident. Hosted SAM requires a private server-side API key and uploads the clip;
+local Llama requires no Meta API key. Never commit runtime credentials.
+
 The local login is deliberately a development stub. For deployment, configure
 authentication, object storage, notifications and secrets using the operator notes.
 Production single sign-on wiring in the web console is still pending.
@@ -107,7 +122,7 @@ cd web && npm run typecheck && npm run lint && npm run build
 ```
 
 The .NET integration tests require Docker; the video decode test requires FFmpeg.
-**Measured on November 3, 2026: 509 existing .NET tests passed, 0 failed, 0 skipped.**
+**Measured on November 3, 2026: 518 .NET tests and 6 Python adapter tests passed.**
 The submission also checks the live web/API flow, exact uploaded video bytes,
 anonymous and cross-tenant refusals, real local Llama inference, and persisted
 staff transitions. See [validation notes](submission/VALIDATION.md).
