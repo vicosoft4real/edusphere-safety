@@ -1,8 +1,8 @@
 # Cerebral Valley submission answers
 
 Prepared against the actual Meta Global AI Developer Hackathon submission form on
-November 3, 2026. The participant must select their track, confirm the contributor
-list, answer personal experience surveys, and accept the publishing permission.
+November 3, 2026. Indie Developer is confirmed by the entrant. The completed form
+awaits the entrant's publishing permission and final submission.
 
 ## Team name
 
@@ -15,7 +15,7 @@ contributors before submission; do not omit contributors.
 
 ## Track
 
-Confirm **Indie Developer** or **Startups** with the entrant.
+**Indie Developer**, confirmed by the entrant.
 
 ## Problem statement
 
@@ -52,10 +52,13 @@ https://github.com/vicosoft4real/edusphere-safety
 
 ## Three-minute demo video
 
-https://vicosoft4real.github.io/edusphere-safety/
+https://www.youtube.com/watch?v=3fFxLrLHKA8
 
-The watch page includes an inline player and a direct MP4 download from the public
-`hackathon-demo` release. The final video is 179.89 seconds (under three minutes),
+Uploaded to Victor Oluwayemi's channel as **Unlisted**, with the entrant's approval.
+YouTube playback and Unlisted visibility were verified. A fallback watch page at
+https://vicosoft4real.github.io/edusphere-safety/ includes an inline player and a
+direct MP4 download from the public `hackathon-demo` release.
+The final video is 179.89 seconds (under three minutes),
 1920×1080 H.264/AAC, with burned-in English captions and a separate SRT.
 
 ## Describe your use of Meta products to build the submitted project
