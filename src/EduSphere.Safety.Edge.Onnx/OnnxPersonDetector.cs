@@ -53,6 +53,7 @@ public sealed class OnnxPersonDetector : IPersonDetector, IDisposable
     /// <param name="personClassIndex">COCO class index treated as person (0 = person).</param>
     /// <param name="confidenceThreshold">Detector signal threshold in 0..1 (NOT a danger probability).</param>
     /// <param name="intraOpThreads">ONNX intra-op thread pool size (≥ 1).</param>
+    /// <param name="rawGridOutput">True for the recorded PINTO export: decode stride-grid offsets and log sizes before parsing. False only for exports with embedded decoding.</param>
     /// <exception cref="InvalidDataException">
     /// Weights checksum mismatch (refuse to start), or the model does not expose exactly
     /// one input.
@@ -64,7 +65,8 @@ public sealed class OnnxPersonDetector : IPersonDetector, IDisposable
         int inputSize = YoloxOutputParser.SupportedInputSize,
         int personClassIndex = 0,
         double confidenceThreshold = 0.5,
-        int intraOpThreads = 1)
+        int intraOpThreads = 1,
+        bool rawGridOutput = true)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
         {
@@ -120,9 +122,9 @@ public sealed class OnnxPersonDetector : IPersonDetector, IDisposable
         _inputSize = inputSize;
         _pixelDivisor = pixelDivisor;
         _confidenceThreshold = confidenceThreshold;
-        _parser = new YoloxOutputParser(personClassIndex);
+        _parser = new YoloxOutputParser(personClassIndex, rawGridInputSize: rawGridOutput ? inputSize : null);
 
-        var options = new SessionOptions
+        using var options = new SessionOptions
         {
             GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
             IntraOpNumThreads = intraOpThreads,

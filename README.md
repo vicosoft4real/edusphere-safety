@@ -16,6 +16,7 @@ boundaries. It does not replace supervision or physical safety measures.
 - [Submission answers](submission/SUBMISSION_ANSWERS.md)
 - [Architecture and original design](docs/superpowers/specs/2026-10-29-edusphere-safety-design.md)
 - [Operator configuration](docs/operator-notes.md)
+- [Real-footage verification and hosted SAM 3.1 adapter](docs/real-footage.md)
 
 [![EduSphere Safety demo](submission/demo-poster.jpg)](https://www.youtube.com/watch?v=3fFxLrLHKA8)
 

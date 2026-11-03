@@ -45,7 +45,9 @@ public sealed class YoloxOutputParser : IModelOutputParser
     /// <summary>Maximum candidates returned per frame (applied after the score sort).</summary>
     public int MaxCandidates { get; }
 
-    public YoloxOutputParser(int personClassIndex = 0, int maxCandidates = DefaultMaxCandidates)
+    private readonly int? _rawGridInputSize;
+
+    public YoloxOutputParser(int personClassIndex = 0, int maxCandidates = DefaultMaxCandidates, int? rawGridInputSize = null)
     {
         if (personClassIndex < 0 || personClassIndex >= ClassCount)
         {
@@ -59,6 +61,11 @@ public sealed class YoloxOutputParser : IModelOutputParser
 
         PersonClassIndex = personClassIndex;
         MaxCandidates = maxCandidates;
+        if (rawGridInputSize is int size && (size < 256 || size > 1280 || size % 32 != 0))
+        {
+            throw new ArgumentOutOfRangeException(nameof(rawGridInputSize));
+        }
+        _rawGridInputSize = rawGridInputSize;
     }
 
     /// <inheritdoc />
@@ -91,6 +98,30 @@ public sealed class YoloxOutputParser : IModelOutputParser
         {
             throw new InvalidDataException(
                 $"YOLOX output length {output.Length} does not match shape [1, {anchors}, {ChannelsPerAnchor}].");
+        }
+
+        if (_rawGridInputSize is int gridSize)
+        {
+            // YOLOX exports without decode_in_inference return grid offsets and
+            // log sizes, not canvas pixels. Decode before letterbox inversion.
+            var expected = new[] { 8, 16, 32 }.Sum(s => (gridSize / s) * (gridSize / s));
+            if (anchors != expected)
+                throw new InvalidDataException($"Raw YOLOX grid at {gridSize}px needs {expected} anchors, got {anchors}.");
+            output = (float[])output.Clone();
+            int anchor = 0;
+            foreach (var stride in new[] { 8, 16, 32 })
+            {
+                var cells = gridSize / stride;
+                for (var y = 0; y < cells; y++)
+                for (var x = 0; x < cells; x++, anchor++)
+                {
+                    var row = anchor * ChannelsPerAnchor;
+                    output[row] = (output[row] + x) * stride;
+                    output[row + 1] = (output[row + 1] + y) * stride;
+                    output[row + 2] = MathF.Exp(output[row + 2]) * stride;
+                    output[row + 3] = MathF.Exp(output[row + 3]) * stride;
+                }
+            }
         }
 
         if (srcWidth <= 0)

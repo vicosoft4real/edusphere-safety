@@ -17,12 +17,17 @@ What is recorded here is provenance + checksum + input contract only.
 - SHA256: `5515a6d732986dea8c9d1241dc5464c3eb161048e8fd959314755e5b5496c299`
 - Verified session metadata (ONNX Runtime 1.22.0, observed, not claimed):
   input `images` float32 `[1,3,416,416]`; output `output` float32 `[1,3549,85]`
-  (3549 = 52²+26²+13² anchors; raw pre-NMS rows: cx,cy,w,h + objectness +
-  80 class scores — matches `YoloxOutputParser`).
+  (3549 = 52²+26²+13² anchors). Box coordinates are **raw grid offsets and log
+  widths/heights**, followed by objectness and 80 class scores. The adapter must
+  apply `(xy + grid) * stride` and `exp(wh) * stride` at strides 8/16/32 before
+  the decoded-canvas parser. Real-video verification exposed and corrected the
+  earlier assumption that this export already contained decoded pixel boxes.
 - Preprocessing contract: letterbox to 416×416 square, pad 114 gray, raw
   0..255 pixels (`--pixel-divisor 1.0`), NCHW float32. No mean/std shift.
 - Run: `edgeagent --model models/yolox_s_416x416.onnx --model-sha256 <above>
-  --pixel-divisor 1.0 --input-size 416 [...]` (checksum enforced at startup).
+  --pixel-divisor 1.0 --input-size 416 --model-output raw-grid [...]`
+  (checksum enforced at startup). `raw-grid` is the default for this candidate;
+  use `--model-output decoded` only for an export with decoding embedded.
 
 ## Rejected alternative in the same bundle
 

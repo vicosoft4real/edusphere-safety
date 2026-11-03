@@ -57,3 +57,8 @@ submission/render/
 submission/storyboard.html
 __pycache__/
 *.pyc
+
+# Local API credentials
+.env
+.env.*
+!.env.example

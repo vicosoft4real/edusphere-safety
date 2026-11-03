@@ -105,6 +105,10 @@ catch (Exception ex) when (ex is InvalidDataException or IOException or Unauthor
     return 2;
 }
 
+// This standalone process owns the native environment. Dispose all sessions
+// before the environment, rather than leaving native cleanup to process exit.
+using var ortEnvironment = !string.IsNullOrWhiteSpace(modelPath)
+    ? Microsoft.ML.OnnxRuntime.OrtEnv.Instance() : null;
 IPersonDetector detector;
 if (!string.IsNullOrWhiteSpace(modelPath))
 {
@@ -116,6 +120,12 @@ if (!string.IsNullOrWhiteSpace(modelPath))
     var confidence = ArgDouble(args, "--confidence", 0.5);
     var threads = ArgInt(args, "--intra-op-threads", 1);
     var inputSize = ArgInt(args, "--input-size", YoloxOutputParser.SupportedInputSize);
+    var outputEncoding = Arg(args, "--model-output", "raw-grid");
+    if (outputEncoding is not ("raw-grid" or "decoded"))
+    {
+        Console.Error.WriteLine("--model-output must be raw-grid or decoded.");
+        return 2;
+    }
     if (string.IsNullOrWhiteSpace(modelSha) || !double.TryParse(
             divisorRaw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var divisor))
@@ -126,7 +136,7 @@ if (!string.IsNullOrWhiteSpace(modelPath))
 
     try
     {
-        detector = new OnnxPersonDetector(modelPath, modelSha, divisor, inputSize, confidenceThreshold: confidence, intraOpThreads: threads);
+        detector = new OnnxPersonDetector(modelPath, modelSha, divisor, inputSize, confidenceThreshold: confidence, intraOpThreads: threads, rawGridOutput: outputEncoding == "raw-grid");
     }
     catch (Exception ex) when (ex is ArgumentException or InvalidDataException or IOException or UnauthorizedAccessException)
     {
