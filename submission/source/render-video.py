@@ -193,7 +193,7 @@ def render():
         '-i',str(SUB/'edusphere-safety-demo.srt'),'-map','0:v','-map','0:a','-map','1:0','-c:v','copy','-c:a','copy',
         '-c:s','mov_text','-metadata:s:s:0','language=eng','-metadata','title=EduSphere Safety — Meta Global AI Developer Hackathon',
         '-metadata','comment=Real app recordings; synthetic pipeline footage; local Meta Llama briefing; inference wait shortened.',
-        '-t','179.95','-movflags','+faststart',str(final)],check=True)
+        '-t','179.8','-movflags','+faststart',str(final)],check=True)
     subprocess.run(['ffmpeg','-y','-loglevel','error','-ss','3','-i',str(final),'-frames:v','1',str(SUB/'demo-poster.jpg')],check=True)
     print('Final duration:',probe(final),'seconds',flush=True)
     storyboard()

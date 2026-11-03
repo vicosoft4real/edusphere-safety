@@ -54,5 +54,6 @@ submission/*.aiff
 submission/*.mp3
 submission/.venv/
 submission/render/
+submission/storyboard.html
 __pycache__/
 *.pyc

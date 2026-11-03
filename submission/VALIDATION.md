@@ -24,6 +24,7 @@ not a substitute for this verification.
 | Main web pages | Overview, devices, cameras, rules, policies, diagnostics and incidents loaded against the real API |
 | Local email transport | Worker wrote `.eml` files to the local pickup directory; no external email sent |
 | Physical CCTV discovery | No ONVIF responder found; no live-camera validation claimed |
+| Final video | 179.89 seconds; 1920×1080, 30 fps, H.264/AAC; English captions; full decode check passed |
 
 The first production-build attempt ran against the active development output
 directory and failed because Next.js development and production processes shared

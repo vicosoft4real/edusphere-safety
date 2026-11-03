@@ -52,8 +52,11 @@ https://github.com/vicosoft4real/edusphere-safety
 
 ## Three-minute demo video
 
-Use the public MP4 attached to the repository's `hackathon-demo` release. Confirm
-the link opens without signing in before submitting.
+https://vicosoft4real.github.io/edusphere-safety/
+
+The watch page includes an inline player and a direct MP4 download from the public
+`hackathon-demo` release. The final video is 179.89 seconds (under three minutes),
+1920×1080 H.264/AAC, with burned-in English captions and a separate SRT.
 
 ## Describe your use of Meta products to build the submitted project
 

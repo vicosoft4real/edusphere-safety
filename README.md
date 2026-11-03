@@ -10,11 +10,14 @@ Built for the **Meta Global AI Developer Hackathon 2026**, under **Build for You
 World**. This is a working prototype, with explicit simulation and deployment
 boundaries. It does not replace supervision or physical safety measures.
 
-- [Three-minute demo and captions](https://github.com/vicosoft4real/edusphere-safety/releases/tag/hackathon-demo)
+- [Watch the three-minute demo](https://vicosoft4real.github.io/edusphere-safety/)
+- [Download the MP4 and captions](https://github.com/vicosoft4real/edusphere-safety/releases/tag/hackathon-demo)
 - [Detailed judge's guide](submission/JUDGES_GUIDE.md)
 - [Submission answers](submission/SUBMISSION_ANSWERS.md)
 - [Architecture and original design](docs/superpowers/specs/2026-10-29-edusphere-safety-design.md)
 - [Operator configuration](docs/operator-notes.md)
+
+[![EduSphere Safety demo](submission/demo-poster.jpg)](https://vicosoft4real.github.io/edusphere-safety/)
 
 ## What runs
 
