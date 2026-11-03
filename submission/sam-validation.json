@@ -1,0 +1,22 @@
+{
+  "verificationDate": "2026-11-03",
+  "source": "https://github.com/opencv/opencv/blob/4.x/samples/data/vtest.avi",
+  "sourceDescription": "12-second real pedestrian sample; not local network CCTV",
+  "clipSha256": "206ac2675a2018fc02814b448c51c73230410d90b6a95f08fbde3aa3d76b342d",
+  "model": "sam-3.1",
+  "inferenceProvider": "Meta Model API",
+  "apiFramesProcessed": 120,
+  "framesWithTracks": 120,
+  "uniqueResponseScopedTrackIds": 8,
+  "edgeDecodedFrames": 120,
+  "edgeZoneEvents": 6,
+  "edgeModelVersions": [
+    "sam-3.1"
+  ],
+  "edgeExitCode": 0,
+  "listedApiUsageCostUSD": 0.024,
+  "automaticInferenceRetries": 0,
+  "groundTruthAccuracyMeasured": false,
+  "continuousCameraStreamValidated": false,
+  "scope": "Recorded constant-frame-rate clip; source-hash and FPS bound; no cross-response identity claim"
+}

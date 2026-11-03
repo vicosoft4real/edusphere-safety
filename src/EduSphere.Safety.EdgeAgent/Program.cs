@@ -49,6 +49,7 @@ var cameraId = Req(args, "--camera");
 var rulesPath = Req(args, "--rules");
 var modelPath = Arg(args, "--model", string.Empty);
 var manifestPath = Arg(args, "--manifest", string.Empty);
+var samResultsPath = Arg(args, "--sam-results", string.Empty);
 var outDir = Req(args, "--out");
 var width = ArgInt(args, "--width", 640);
 var height = ArgInt(args, "--height", 480);
@@ -109,8 +110,22 @@ catch (Exception ex) when (ex is InvalidDataException or IOException or Unauthor
 // before the environment, rather than leaving native cleanup to process exit.
 using var ortEnvironment = !string.IsNullOrWhiteSpace(modelPath)
     ? Microsoft.ML.OnnxRuntime.OrtEnv.Instance() : null;
-IPersonDetector detector;
-if (!string.IsNullOrWhiteSpace(modelPath))
+IPersonDetector? detector = null;
+SamTrackingResults? samResults = null;
+if (!string.IsNullOrWhiteSpace(samResultsPath))
+{
+    if (!string.IsNullOrWhiteSpace(modelPath) || !string.IsNullOrWhiteSpace(manifestPath) || bundle.ModelVersion != "sam-3.1")
+    {
+        Console.Error.WriteLine("SAM results require modelVersion sam-3.1 in rules and cannot be combined with --model or --manifest.");
+        return 2;
+    }
+    try { samResults = SamTrackingResults.Load(samResultsPath, sourceUrl, fps); }
+    catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine($"Refusing SAM results: {ex.Message}"); return 2;
+    }
+}
+else if (!string.IsNullOrWhiteSpace(modelPath))
 {
     // Live detection: real pixels through the ONNX model. Weights checksum is
     // mandatory (refuse-to-start on mismatch); pixelDivisor must match the
@@ -148,7 +163,7 @@ else
 {
     if (string.IsNullOrWhiteSpace(manifestPath))
     {
-        Console.Error.WriteLine("Refusing to start: need --manifest (replay) or --model (live detection).");
+        Console.Error.WriteLine("Refusing to start: need --manifest (replay), --model (live detection), or --sam-results (source-bound API tracks).");
         Console.Error.WriteLine("Usage: edgeagent --source <url> --camera <id> --rules <bundle.json> [--manifest <manifest.json> | --model <model.onnx> --model-sha256 <hex> --pixel-divisor <f>] --out <dir> [options]");
         return 2;
     }
@@ -167,6 +182,7 @@ else
 
 using var detectorLifetime = detector as IDisposable;
 var tracker = new Tracker(grace);
+var modelTrackProjector = new ModelTrackProjector();
 var engine = new RuleEngine(bundle.Rules, new ScheduleEvaluator(), bundle.SchedulesById);
 
 var lastEventTime = firstFrameTime;
@@ -204,8 +220,9 @@ await foreach (var frame in source.GetFramesAsync(cts.Token))
     // Pinned wiring: the tracker's ActiveTracks ARE the presence signal — passed
     // through unfiltered (even grace-held stale boxes), per RuleEngine.Evaluate docs.
     monitor.NoteFrame(source.LastFrameHash ?? 0, streamOpen: true, frame.CapturedAtUtc);
-    var detections = await detector.DetectAsync(frame, cts.Token);
-    var tracked = tracker.Update(frame.Number, detections, frame.CapturedAtUtc, frame.IsResolutionChange);
+    var tracked = samResults is not null
+        ? modelTrackProjector.Update(frame.Number, samResults.ForFrame(frame.Number), frame.CapturedAtUtc)
+        : tracker.Update(frame.Number, await detector!.DetectAsync(frame, cts.Token), frame.CapturedAtUtc, frame.IsResolutionChange);
     var scored = tracked.ActiveTracks
         .Select(t => new ScoredTrack(t, t.Confidence, t.LastDetectionTimeUtc))
         .ToArray();
@@ -252,6 +269,10 @@ await foreach (var frame in source.GetFramesAsync(cts.Token))
 // (CryptographicException) are NOT dropped here — they propagate so a corrupt
 // evidence store is loud, not silently discarded. No uploader runs in this host;
 // the Plan 4 drain removes entries on successful upload and unpins their segments.
+if (samResults is not null && frames != samResults.FrameCount)
+{
+    Console.Error.WriteLine("Source decoding ended before all SAM result frames were consumed."); return 1;
+}
 foreach (var pending in spool.All.ToArray())
 {
     if (pending.SegmentId is null || buffer is null)

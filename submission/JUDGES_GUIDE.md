@@ -8,6 +8,15 @@ Built during the Meta Global AI Developer Hackathon, October 29–November 3, 20
 Theme: **Build for Your World**. Application code: MIT. This is a prototype with
 working components and explicit simulation boundaries.
 
+**Additional real-footage verification:** the hosted Meta SAM 3.1 recorded-clip
+workflow was exercised on 120 frames of a public pedestrian recording. The API
+returned tracks on all 120 frames with 8 response-scoped IDs. The edge agent
+preserved those IDs through its rule state and wrote 6 events for a demonstration
+zone. It validates source SHA-256 and FPS before consuming results. The sample is
+not local CCTV and is separate from the original three-minute replay demo.
+Commands, limits and measurements: [real footage guide](../docs/real-footage.md),
+[SAM validation](sam-validation.json).
+
 ## The problem and who benefits
 
 Schools can have cameras while still lacking a consistent process for reviewing
@@ -85,8 +94,10 @@ Local open-weight inference gives this prototype a deployment option where event
 metadata stays on the host running the model. This is a property of the recorded
 local configuration, not a certification about every future deployment. The
 existing development history records Muse Code as commit author; the runtime Meta
-model feature is directly demonstrated with Llama. We do not claim use of Muse
-Spark, SAM, partner inference services or other tools that were not exercised.
+briefing feature is directly demonstrated with Llama. The additional SAM 3.1 path
+uploads a video clip to Meta Model API for actual object tracking; it was separately
+verified on the public sample above. We do not claim use of Muse Spark or partner
+inference services that were not exercised.
 
 ## Engineering depth
 
@@ -113,8 +124,9 @@ Spark, SAM, partner inference services or other tools that were not exercised.
 ## Validation and limitations
 
 On November 3, the existing .NET solution built with **zero warnings and zero
-errors**. All **509 existing tests passed**, including PostgreSQL integration
-tests, with no failures or skips. The web type check, lint and isolated production
+errors**. After the real-footage and SAM integration fixes, all **518 .NET tests
+passed**, including PostgreSQL integration tests, with no failures or skips, plus
+**6 Python SAM adapter tests**. The web type check, lint and isolated production
 build pass. Additional live checks exercise denied anonymous requests, denied
 cross-tenant and nonmember briefing requests, byte-identical evidence playback,
 real local Llama output and the UI's persisted response workflow. Details are in

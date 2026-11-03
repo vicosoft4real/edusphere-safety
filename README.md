@@ -1,6 +1,6 @@
 # EduSphere Safety
 
-Turn school camera events into an accountable staff response. **Built with Meta Llama.**
+Turn school camera events into an accountable staff response. **Built with Meta Llama and SAM 3.1.**
 
 EduSphere Safety combines a school-side video pipeline, scheduled safety rules,
 tenant-scoped incident management, evidence review, local Llama incident briefings,
@@ -34,6 +34,13 @@ The edge host supports a checksum-verified YOLOX ONNX person detector and a
 deterministic manifest-replay detector for testing. The submission demo uses
 synthetic footage and replayed detections, and labels that choice. It proves the
 decode/track/rules workflow; it does **not** measure real-camera detection accuracy.
+
+The additional recorded-clip path calls **Meta SAM 3.1 API** on actual video,
+preserves its object IDs, and evaluates source-bound results through the edge rule
+engine. A real 120-frame public pedestrian sample produced 8 SAM track IDs and
+6 demonstration-zone events. See [verification and commands](docs/real-footage.md)
+and [measured results](submission/sam-validation.json). This is sample verification,
+not a field accuracy or continuous-stream benchmark.
 
 The current edge host writes an outbox. The demo harness explicitly sends those
 events to the API and uploads supplied synthetic evidence. Automatic edge delivery

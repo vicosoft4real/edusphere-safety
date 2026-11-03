@@ -25,8 +25,12 @@ they do not identify people. It requires field benchmarking before deployment.
 It uploads an MP4 clip with the `person` prompt to `sam-3.1`. Its exported frame
 numbers and object IDs come from SAM, with no extra IoU reassignment. It preserves
 encoded masks and validates boxes; it does not decode or render mask rasters.
-This adapter is not yet wired into the incident dashboard or rule-event ingestion.
-It handles recorded clips, not continuous camera streaming or cross-clip identity.
+The edge agent's `--sam-results` mode feeds those model IDs into the existing rule
+engine, with a source SHA-256 and FPS check before use. IDs are mapped one-to-one
+from SAM's zero-based space to the core's positive ID space, without geometric
+reassignment. Missing frames clear presence and reset trails rather than bridging
+unseen movement. This handles recorded clips, not continuous camera streaming or
+cross-clip identity. Dashboard ingestion still requires the explicit event handoff.
 
 Set `MODEL_API_KEY` in the process environment or in the git-ignored file
 `.demo-runtime/meta-api.env`. Never put keys in source, argv, screenshots or chat.
@@ -38,10 +42,24 @@ python3 tools/sam_tracking.py --video /absolute/path/cctv.mp4 \
 ```
 
 The command uploads video to Meta and incurs API usage; verify your credits and
-spending limit before running it. No API key is configured in the prepared local
-environment, so real SAM inference has not yet been verified. Unit tests cover the
-documented request/response boundary only. An API failure produces an error rather
-than invented fallback tracks. The client has no automatic retries.
+spending limit before running it. A real SAM 3.1 call was verified on the public
+sample described below. An API failure produces an error rather than invented
+fallback tracks. The client has no automatic retries. If Python's default trust
+store is missing, configure `SSL_CERT_FILE` to a trusted CA bundle (for example
+`certifi.where()` from an installed certifi package); never disable verification.
+
+Set `modelVersion` to `sam-3.1` in your rule bundle, then consume the exact same
+video and the saved API result (this second command makes no API call):
+
+```sh
+dotnet run --project src/EduSphere.Safety.EdgeAgent -- \
+  --source /absolute/path/cctv.mp4 --camera camera-1 \
+  --rules /absolute/path/sam-rules.json --out .demo-runtime/sam-events \
+  --sam-results .demo-runtime/sam-results --fps 10 --width 768 --height 576
+```
+
+`--fps` must match the source FPS in the SAM summary. Results for a different clip
+are rejected; missing or malformed metadata is not silently treated as a replay.
 
 For a bounding-box preview, install Pillow and use the measured output:
 
@@ -74,6 +92,18 @@ and 16 events for an explicitly configured demonstration zone. These are observe
 sample results, not ground-truth accuracy scores. The 23 IDs are not a count of
 unique people; fragmentation can retrigger events. The CPU probe processed about
 4.58 frames/second, below the clip's 10 FPS playback rate.
+
+A separate **real Meta SAM 3.1 API request** on those same 120 frames returned
+tracks on all 120 frames and 8 response-scoped object IDs (up to 8 objects in a
+frame). The API usage reported 120 `video_frames_processed`. At the documented
+$0.20/1,000-frame rate, that request's listed usage cost is $0.024, covered by
+existing free credits. The preview uses those returned boxes and IDs. These counts
+are not a ground-truth accuracy comparison with YOLOX and do not establish identity
+through full occlusion. No additional inference is needed to evaluate the saved
+tracks against the demonstration zone.
+The edge agent consumed this source-bound result, evaluated all 120 frames and
+wrote 6 zone events with `modelVersion: sam-3.1`, then exited successfully. This
+post-processing used the saved result and incurred no additional API request.
 
 This sample is not footage from the user's network. Its input, per-frame measurements
 and annotated preview remain in ignored `.demo-runtime/real-footage/`. The existing

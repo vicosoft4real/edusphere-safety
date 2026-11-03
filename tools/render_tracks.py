@@ -24,6 +24,7 @@ def main():
         '-show_entries','stream=width,height','-of','json',args.video]))['streams'][0]
     w,h = info['width'],info['height']
     rows = {r['frame']:r for r in (json.loads(line) for line in Path(args.tracks).read_text().splitlines())}
+    has_events = any('events' in row for row in rows.values())
     zone = json.loads(Path(args.zone).read_text()) if args.zone else None
     font_path = '/System/Library/Fonts/Menlo.ttc'
     font = ImageFont.truetype(font_path,14) if Path(font_path).exists() else ImageFont.load_default()
@@ -79,7 +80,8 @@ def main():
                 labels.append(candidate)
                 draw.rectangle(candidate,fill='#081d20')
                 draw.text((left+3,top+1),label,font=small,fill=color)
-            draw.text((12,h+73),f'Frame {n} | matched tracks {matched} | zone events {events} | playback {args.fps:g} fps',font=small,fill='#d9e4df')
+            event_label = f'zone events {events}' if has_events else 'tracking output'
+            draw.text((12,h+73),f'Frame {n} | matched tracks {matched} | {event_label} | playback {args.fps:g} fps',font=small,fill='#d9e4df')
             encode.stdin.write(im.tobytes())
             if n==40:im.save(str(Path(args.out).with_suffix('.jpg')))
             n+=1
