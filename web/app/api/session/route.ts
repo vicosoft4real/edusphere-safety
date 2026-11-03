@@ -26,12 +26,12 @@ export async function POST(req: NextRequest) {
       { status: upstream.status }
     );
   }
-  const body = (await upstream.json()) as { token?: string };
-  if (!body.token) {
+  const body = (await upstream.json()) as { accessToken?: string };
+  if (!body.accessToken) {
     return NextResponse.json({ code: "auth.failed", message: "Sign-in failed." }, { status: 500 });
   }
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE, body.token, {
+  res.cookies.set(COOKIE, body.accessToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

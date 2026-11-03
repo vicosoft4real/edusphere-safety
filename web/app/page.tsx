@@ -24,7 +24,7 @@ export default async function OverviewPage() {
   const devices = devicesRes.data?.items ?? [];
   const incidents = incidentsRes.data?.items ?? [];
   const open = incidents.filter((i) => i.state === "New" || i.state === "Acknowledged" || i.state === "Investigating");
-  const degraded = devices.filter((d) => d.revoked || !d.lastHeartbeatAt || d.staleConfig);
+  const degraded = devices.filter((d) => deviceStatus(d).label !== "Healthy");
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">

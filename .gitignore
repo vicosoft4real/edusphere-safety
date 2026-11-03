@@ -42,3 +42,17 @@ web/*.tsbuildinfo
 # Model weights (large, licensed binaries): provenance in docs/weights.md,
 # downloaded per docs/edge-benchmark.md freeze procedure, never committed.
 models/*.onnx
+
+# Local demo credentials, evidence, and generated media
+.demo-runtime/
+.plan3run/
+submission/assets/
+submission/recordings/
+submission/*.mp4
+submission/*.wav
+submission/*.aiff
+submission/*.mp3
+submission/.venv/
+submission/render/
+__pycache__/
+*.pyc

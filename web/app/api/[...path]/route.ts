@@ -10,7 +10,7 @@ async function forward(req: NextRequest, path: string[]) {
   if (!token) {
     return NextResponse.json({ code: "auth.required", message: "Sign in first." }, { status: 401 });
   }
-  const target = `${apiUrl()}/v1/${path.join("/")}${req.nextUrl.search}`;
+  const target = `${apiUrl()}/${path.join("/")}${req.nextUrl.search}`;
   const headers = new Headers({ Authorization: `Bearer ${token}` });
   const ifMatch = req.headers.get("if-match");
   if (ifMatch) headers.set("If-Match", ifMatch);
@@ -20,6 +20,7 @@ async function forward(req: NextRequest, path: string[]) {
     method: req.method,
     headers,
     body: hasBody ? await req.text() : undefined,
+    redirect: "manual",
   });
   // Preserve mediated-download redirects, rewritten to stay same-origin so
   // the browser never talks to the Api directly.
@@ -30,10 +31,9 @@ async function forward(req: NextRequest, path: string[]) {
       : location.startsWith("/")
         ? `/api${location}`
         : location;
-    return NextResponse.redirect(new URL(sameOrigin, req.url), 302);
+    return new NextResponse(null, { status: 302, headers: { Location: sameOrigin } });
   }
-  const text = await upstream.text();
-  return new NextResponse(text, {
+  return new NextResponse(upstream.body, {
     status: upstream.status,
     headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
   });

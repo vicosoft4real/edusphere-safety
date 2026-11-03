@@ -1,0 +1,48 @@
+{
+  "checks": [
+    "anonymous briefing refused",
+    "anonymous evidence refused",
+    "other tenant cannot brief this incident",
+    "nonmember cannot brief this incident",
+    "evidence proxy returns original MP4 bytes",
+    "authorized request runs real local Meta Llama",
+    "structured review steps and unknowns returned",
+    "caller cannot substitute another tenant or prompt",
+    "output identifies metadata-only basis"
+  ],
+  "allPassed": true,
+  "llamaRequestSeconds": 39.09,
+  "llamaResult": {
+    "summary": "A ZoneIntrusion rule event was recorded at the main-campus camera. The incident is New and awaits staff review.",
+    "reviewSteps": [
+      "Review the visual context of the recorded event to understand the circumstances surrounding the intrusion.",
+      "Follow the school's established protocol for reviewing ZoneIntrusion events, including reviewing available evidence and any supporting documentation."
+    ],
+    "unknowns": [
+      "The visual context of the recorded event is unknown.",
+      "The intent behind the intrusion is unknown."
+    ],
+    "model": "llama3.2:latest",
+    "generatedAt": "2026-11-03T10:10:02.985Z",
+    "incidentVersion": 0,
+    "basis": "Incident metadata only; no images or video sent to the model."
+  },
+  "evidenceSha256": "4d716979fd61769c0dc43ffb8d3a858e3ef46d8740b1bce7f41df447ad9bb359",
+  "database": {
+    "state": "Resolved",
+    "version": 3,
+    "activityCount": 3,
+    "evidenceAccessCount": 8,
+    "deliveryAttemptCount": 3
+  },
+  "dotnetTests": {
+    "passed": 509,
+    "failed": 0,
+    "skipped": 0
+  },
+  "build": {
+    "dotnetWarnings": 0,
+    "dotnetErrors": 0,
+    "webProduction": "passed"
+  }
+}

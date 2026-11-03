@@ -1,0 +1,157 @@
+[
+  {
+    "id": 1,
+    "duration": 12,
+    "kind": "hook",
+    "chapter": "THE PROBLEM",
+    "title": "From footage\nto follow-through.",
+    "tag": "Meta Global AI Developer Hackathon \u00b7 built Oct 29\u2013Nov 3, 2026",
+    "narration": "A camera can record an incident without getting help to the right person. EduSphere Safety connects school camera events to a staff response, with evidence and a clear record of who acted."
+  },
+  {
+    "id": 2,
+    "duration": 12,
+    "kind": "architecture",
+    "chapter": "HOW IT WORKS",
+    "title": "Detect locally.\nRespond together.",
+    "tag": "Edge agent \u2192 API \u2192 staff",
+    "narration": "The edge agent decodes video, tracks people, and applies scheduled rules. A cloud API stores incidents. The staff console combines evidence review, local Meta Llama briefings, and a recorded response workflow."
+  },
+  {
+    "id": 3,
+    "duration": 14,
+    "kind": "screen",
+    "clip": "overview",
+    "chapter": "01 / THE RUNNING APP",
+    "title": "A school-specific\nsafety console.",
+    "bullets": [
+      "Real .NET API + PostgreSQL",
+      "School membership checked",
+      "Local development sign-in"
+    ],
+    "tag": "Recorded from the running application",
+    "narration": "This is the running application with a real PostgreSQL database. We sign in as the school safety officer. The overview shows enrolled devices and open incidents, while diagnostics identifies camera coverage gaps."
+  },
+  {
+    "id": 4,
+    "duration": 16,
+    "kind": "screen",
+    "clip": "rules",
+    "chapter": "02 / DEFINE THE RULE",
+    "title": "A zone. A schedule.\nA repeatable rule.",
+    "bullets": [
+      "Polygon + after-hours schedule",
+      "Persistence + cooldown",
+      "Versioned configuration"
+    ],
+    "tag": "Recorded application \u00b7 rule configuration",
+    "narration": "A school defines a restricted zone and an after-hours schedule. This editor stores the polygon, confidence threshold, persistence, and cooldown in a versioned bundle. Persistence requires multiple frames, so one isolated detection does not trigger this rule."
+  },
+  {
+    "id": 5,
+    "duration": 18,
+    "kind": "simulation",
+    "chapter": "03 / RUN THE EDGE PIPELINE",
+    "title": "60 frames.\nOne zone event.",
+    "bullets": [
+      "FFmpeg decode",
+      "Manifest replay \u2192 tracker \u2192 rules",
+      "One event persisted to the outbox"
+    ],
+    "tag": "Synthetic footage \u00b7 replayed detections, not an accuracy benchmark",
+    "narration": "This reproducible demo uses synthetic footage and replayed detections. The real FFmpeg decoder, tracker, and rule engine process sixty frames and write one zone event to the persistent outbox. This verifies pipeline behavior, not detector accuracy."
+  },
+  {
+    "id": 6,
+    "duration": 14,
+    "kind": "screen",
+    "clip": "incident",
+    "chapter": "04 / CREATE AN INCIDENT",
+    "title": "One event.\nOne incident.",
+    "bullets": [
+      "Device-authenticated ingestion",
+      "Duplicate event \u2192 same incident ID",
+      "Camera, campus and version retained"
+    ],
+    "tag": "Recorded application \u00b7 explicit demo handoff from edge outbox",
+    "narration": "A demo handoff sends the edge outbox event to the real API. Retrying the same event returns the same incident identifier. Staff open that single incident from the inbox."
+  },
+  {
+    "id": 7,
+    "duration": 18,
+    "kind": "screen",
+    "clip": "evidence",
+    "chapter": "05 / REVIEW THE EVIDENCE",
+    "title": "Context before\naction.",
+    "bullets": [
+      "Synthetic clip uploaded via manifest API",
+      "Short-lived playback link",
+      "Evidence access is audit-logged"
+    ],
+    "tag": "Recorded application \u00b7 supplied synthetic clip, not automatic clip extraction",
+    "narration": "We upload the synthetic clip through the evidence API and open it from the incident. Playback is authorized through a short-lived link, and access is logged. This supplied test clip gives staff context; automatic live-camera clip extraction remains future work."
+  },
+  {
+    "id": 8,
+    "duration": 22,
+    "kind": "screen",
+    "clip": "llama",
+    "chapter": "06 / META LLAMA IN THE WORKFLOW",
+    "title": "A briefing.\nA checklist.\nClear unknowns.",
+    "bullets": [
+      "Meta Llama 3.2 \u00b7 running locally",
+      "Tenant-authorized incident metadata",
+      "AI drafts; staff decide"
+    ],
+    "tag": "Real local Llama inference \u00b7 inference wait shortened in the edit",
+    "narration": "Now we ask Meta Llama to draft an incident briefing. It runs locally and receives only authorized event metadata, never camera footage. The structured result gives staff a summary, review steps, and explicit unknowns. It cannot change the incident or take action. Staff verify the draft against the evidence."
+  },
+  {
+    "id": 9,
+    "duration": 18,
+    "kind": "screen",
+    "clip": "response",
+    "chapter": "07 / CLOSE THE LOOP",
+    "title": "Acknowledge.\nInvestigate. Resolve.",
+    "bullets": [
+      "Staff owns the response",
+      "Version-checked state transitions",
+      "Actor and note recorded in activity"
+    ],
+    "tag": "Recorded application \u00b7 persisted staff actions",
+    "narration": "The officer acknowledges the incident, adds an investigation note, and resolves it. Each transition checks the current version to prevent conflicting updates. The database records the actor and activity. Acknowledgement also cancels pending escalation, connecting the alert to an accountable staff response."
+  },
+  {
+    "id": 10,
+    "duration": 14,
+    "kind": "screen",
+    "clip": "operations",
+    "chapter": "08 / OPERATE RESPONSIBLY",
+    "title": "Escalation with\nvisibility.",
+    "bullets": [
+      "Configurable escalation delay",
+      "Local email pickup verified",
+      "Camera health + evidence access log"
+    ],
+    "tag": "Recorded application \u00b7 local email pickup, not external delivery",
+    "narration": "Notification policy sets escalation recipients and delays. The worker writes email to a local pickup directory in this demo. Diagnostics shows evidence access and untested cameras, making monitoring gaps visible."
+  },
+  {
+    "id": 11,
+    "duration": 14,
+    "kind": "validation",
+    "chapter": "WHAT IS VERIFIED",
+    "title": "Working prototype.\nClear next steps.",
+    "tag": "509 existing tests passed \u00b7 0 failed \u00b7 0 skipped",
+    "narration": "All five hundred and nine existing tests pass, including PostgreSQL integration tests. Next come real-camera validation, measured detector benchmarks, automatic edge delivery, and production sign-in integration."
+  },
+  {
+    "id": 12,
+    "duration": 8,
+    "kind": "close",
+    "chapter": "EDUSPHERE SAFETY",
+    "title": "Make the response\npart of the record.",
+    "tag": "Assistive detection. Human decisions. Accountable response.",
+    "narration": "EduSphere Safety makes the response part of the record. It assists school staff; it never replaces supervision."
+  }
+]

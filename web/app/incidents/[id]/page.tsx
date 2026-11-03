@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Incident } from "@/lib/api";
 import { safetyFetch, signedIn } from "@/lib/server";
 import { TransitionButtons } from "./transition-buttons";
+import { IncidentBriefing } from "./incident-briefing";
 
 const NEXT: Record<Incident["state"], Incident["state"][]> = {
   New: ["Acknowledged"],
@@ -59,6 +60,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         Detection is assistive: it cannot guarantee prevention of injury or replace supervision.
       </p>
       <TransitionButtons id={incident.id} version={incident.version} next={NEXT[incident.state]} />
+      <IncidentBriefing key={incident.id} id={incident.id} version={incident.version} />
       <section aria-label="Evidence" className="mt-6 rounded-lg border border-stone-200 bg-white p-4">
         <h2 className="font-medium">Evidence</h2>
         <p className="mt-1 text-sm text-stone-600">
@@ -67,10 +69,10 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         </p>
         {incident.edgeEventId ? (
           <div className="mt-3 flex gap-3 text-sm">
-            <a className="underline" href={`/api/v1/evidence/${incident.edgeEventId}/clip`}>
+            <a className="underline" href={`/api/v1/evidence/${encodeURIComponent(incident.edgeEventId)}/clip`}>
               Play clip
             </a>
-            <a className="underline" href={`/api/v1/evidence/${incident.edgeEventId}/snapshot`}>
+            <a className="underline" href={`/api/v1/evidence/${encodeURIComponent(incident.edgeEventId)}/snapshot`}>
               View snapshot
             </a>
           </div>
