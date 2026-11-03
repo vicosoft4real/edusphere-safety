@@ -60,7 +60,7 @@ The repository's MIT license does not relicense those weights.
 
 ## Run the local demonstration
 
-Prerequisites: .NET 10 SDK, Node.js 22+, PostgreSQL with `psql`/`createdb`, FFmpeg,
+Prerequisites: .NET 10 SDK, Node.js 22 LTS (22.13+) or 24 LTS, PostgreSQL with `psql`/`createdb`, FFmpeg,
 Python 3, and Ollama with Llama 3.2. Local PostgreSQL must allow your OS user to
 create and connect to a dedicated demo database. The recorded run used local
 PostgreSQL 14; the deployment compose file targets PostgreSQL 17.

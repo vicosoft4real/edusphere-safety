@@ -12,6 +12,8 @@ acknowledgement, investigation, resolution and diagnostics.
 - **Source:** public, MIT-licensed application code; model weights have separate licenses.
 - **Validation:** 509 existing .NET tests passed, 0 failed, 0 skipped; web type check,
   lint and production build passed; live authorization, evidence and Llama checks passed.
+- **Dependency follow-up:** patched Zod/PostCSS and compatible ESLint update;
+  production package audit reports zero vulnerabilities and the web/live checks pass.
 - **Judge explanation:** [detailed guide](https://github.com/vicosoft4real/edusphere-safety/blob/main/submission/JUDGES_GUIDE.md).
 
 The demo uses deterministic synthetic footage and manifest-replayed detections

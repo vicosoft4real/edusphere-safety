@@ -25,6 +25,7 @@ not a substitute for this verification.
 | Local email transport | Worker wrote `.eml` files to the local pickup directory; no external email sent |
 | Physical CCTV discovery | No ONVIF responder found; no live-camera validation claimed |
 | Final video | 179.89 seconds; 1920×1080, 30 fps, H.264/AAC; English captions; full decode check passed |
+| Production package audit after patch | 0 vulnerabilities reported by `npm audit --omit=dev` |
 
 The first production-build attempt ran against the active development output
 directory and failed because Next.js development and production processes shared
@@ -35,6 +36,13 @@ clean development cache before the successful walkthrough.
 The production build reports the existing warning that the Next.js ESLint plugin
 is not detected by its integrated lint step. The standalone lint and type checks
 pass, and this warning does not stop the build.
+
+GitHub flagged inherited dependency advisories after the first publication. We
+updated Zod to the patched 4.6 line, overrode PostCSS to 8.5.32 and updated ESLint
+within version 9. The lockfile is committed. Type checking, lint, the isolated
+production build and all nine live boundary checks pass after those changes.
+The production dependency audit reports zero vulnerabilities. This does not claim
+that the separate development-tool dependency tree has no advisories.
 
 ## Browser/API defects corrected while preparing the demo
 

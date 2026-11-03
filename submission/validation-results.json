@@ -44,5 +44,15 @@
     "dotnetWarnings": 0,
     "dotnetErrors": 0,
     "webProduction": "passed"
+  },
+  "dependencyPatch": {
+    "zod": "4.6.7",
+    "postcss": "8.5.32",
+    "eslint": "9.39.5",
+    "productionAuditVulnerabilities": 0,
+    "typecheck": "passed",
+    "lint": "passed",
+    "productionBuild": "passed",
+    "liveChecksPassed": 9
   }
 }
